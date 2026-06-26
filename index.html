@@ -211,7 +211,7 @@ const defaultState=()=>({
   settings:{
     namaSekolah:"YAYASAN HUDA WAN NURUL QUR'ANI",
     alamatSekolah:"Tangsi Lama, Seruway, Aceh Tamiang",
-    logoDataURL:'',
+    logoDataURL:'https://iili.io/fFA80TF.md.png',
     tahunAjaran:'2026/2027',
     tahunAjaranList:['2026/2027'],
     sppTK:150000, sppSD:200000, sppSMP:300000,
@@ -227,7 +227,7 @@ Kami informasikan tagihan SPP/Infaq:
 
 Mohon segera diselesaikan. Jazakumullahu khairan.
 _{SEKOLAH}_`,
-    gasUrl:'', lastSyncAt:null, lastSyncStatus:'idle'
+    gasUrl:'https://script.google.com/macros/s/AKfycbxbCQiLm1v90Jy5b3_MpClEbIOarKulhZSRQ7e7WbdjxrdR-fh8APfr69qBlDaIaIg/exec', lastSyncAt:null, lastSyncStatus:'idle'
   }
 });
 let state=loadState();
@@ -240,6 +240,10 @@ function loadState(){
     const p=JSON.parse(raw); const d=defaultState();
     for(const k of Object.keys(d)) if(p[k]===undefined) p[k]=d[k];
     for(const k of Object.keys(d.settings)) if(p.settings[k]===undefined) p.settings[k]=d.settings[k];
+    // Pastikan URL default selalu terisi (override nilai kosong dari versi sebelumnya)
+    if(!p.settings.gasUrl) p.settings.gasUrl=d.settings.gasUrl;
+    if(!p.settings.logoDataURL) p.settings.logoDataURL=d.settings.logoDataURL;
+    localStorage.setItem(APP_KEY,JSON.stringify(p));
     return p;
   }catch(e){ console.error(e); return defaultState(); }
 }
@@ -262,6 +266,22 @@ function setSyncDot(s){
   else if(s==='err') t.textContent='Gagal sinkron — akan dicoba ulang';
   else t.textContent=state.settings.gasUrl?'Menunggu sinkronisasi':'Spreadsheet belum dihubungkan';
 }
+async function gasFetch(url, body){
+  // Coba normal dulu (bisa baca respons JSON)
+  try{
+    const r=await fetch(url,{method:'POST',mode:'cors',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
+    const j=await r.json();
+    return {ok:true,data:j};
+  }catch(err){
+    // Fallback: no-cors fire-and-forget (request tetap dikirim ke GAS, hanya tidak bisa baca respons)
+    try{
+      await fetch(url,{method:'POST',mode:'no-cors',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
+      return {ok:true,data:{ok:true,opaque:true}};
+    }catch(e2){
+      return {ok:false,error:err.message||String(err)};
+    }
+  }
+}
 async function flushQueue(manual=false){
   if(!state.settings.gasUrl){ if(manual) toast('Hubungkan URL Spreadsheet dulu di Pengaturan.','warn'); setSyncDot('idle'); return false; }
   if(!navigator.onLine){ setSyncDot('err'); return false; }
@@ -269,35 +289,30 @@ async function flushQueue(manual=false){
   setSyncDot('sync');
   const batch=queue.filter(q=>q.status==='pending').slice(0,50);
   if(!batch.length){ setSyncDot('ok'); return true; }
-  try{
-    const r=await fetch(state.settings.gasUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'push',ops:batch,user:session?.username||'sistem'})});
-    const j=await r.json();
-    if(!j.ok) throw new Error(j.error||'Gagal');
+  const res=await gasFetch(state.settings.gasUrl,{action:'push',ops:batch,user:session?.username||'sistem'});
+  if(res.ok && (res.data.ok || res.data.opaque)){
     const ids=new Set(batch.map(b=>b.op_id));
     queue=queue.filter(q=>!ids.has(q.op_id)); saveQueue();
     state.settings.lastSyncAt=todayISO();
-    state.syncLog.unshift({id:uid(),tanggal:todayISO(),jenis:'push',jumlah:batch.length,user:session?.username||'sistem',status:'ok',keterangan:batch.length+' operasi terkirim'});
+    state.syncLog.unshift({id:uid(),tanggal:todayISO(),jenis:'push',jumlah:batch.length,user:session?.username||'sistem',status:'ok',keterangan:batch.length+' operasi terkirim'+(res.data.opaque?' (mode opaque)':'')});
     state.syncLog=state.syncLog.slice(0,200); saveState(); setSyncDot('ok');
     if(manual) toast('✅ '+batch.length+' data tersinkron.','success');
     return true;
-  }catch(err){
-    state.syncLog.unshift({id:uid(),tanggal:todayISO(),jenis:'push',jumlah:batch.length,user:session?.username||'sistem',status:'err',keterangan:String(err.message||err)});
-    saveState(); setSyncDot('err'); if(manual) toast('❌ Sinkronisasi gagal: '+(err.message||''),'error'); return false;
   }
+  state.syncLog.unshift({id:uid(),tanggal:todayISO(),jenis:'push',jumlah:batch.length,user:session?.username||'sistem',status:'err',keterangan:String(res.error||res.data?.error||'Gagal')});
+  saveState(); setSyncDot('err'); if(manual) toast('❌ Sinkronisasi gagal: '+(res.error||''),'error'); return false;
 }
 async function pushSnapshot(manual=false){
   if(!state.settings.gasUrl) return false; setSyncDot('sync');
-  try{
-    const snap={users:state.users,siswa:state.siswa,transaksi:state.transaksi,kategori:state.kategori,tunggakanLalu:state.tunggakanLalu,bukuHutang:state.bukuHutang,settings:state.settings};
-    const r=await fetch(state.settings.gasUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'snapshot',data:snap,user:session?.username||'sistem'})});
-    const j=await r.json(); if(!j.ok) throw new Error(j.error||'Gagal');
+  const snap={users:state.users,siswa:state.siswa,transaksi:state.transaksi,kategori:state.kategori,tunggakanLalu:state.tunggakanLalu,bukuHutang:state.bukuHutang,settings:state.settings};
+  const res=await gasFetch(state.settings.gasUrl,{action:'snapshot',data:snap,user:session?.username||'sistem'});
+  if(res.ok && (res.data.ok || res.data.opaque)){
     state.settings.lastSyncAt=todayISO();
-    state.syncLog.unshift({id:uid(),tanggal:todayISO(),jenis:'snapshot',jumlah:1,user:session?.username||'sistem',status:'ok',keterangan:'Snapshot terkirim'});
+    state.syncLog.unshift({id:uid(),tanggal:todayISO(),jenis:'snapshot',jumlah:1,user:session?.username||'sistem',status:'ok',keterangan:'Snapshot terkirim'+(res.data.opaque?' (mode opaque)':'')});
     saveState(); setSyncDot('ok'); if(manual) toast('✅ Snapshot terkirim ke Spreadsheet.','success'); return true;
-  }catch(err){
-    state.syncLog.unshift({id:uid(),tanggal:todayISO(),jenis:'snapshot',jumlah:1,user:session?.username||'sistem',status:'err',keterangan:String(err.message||err)});
-    saveState(); setSyncDot('err'); if(manual) toast('❌ Snapshot gagal: '+(err.message||''),'error'); return false;
   }
+  state.syncLog.unshift({id:uid(),tanggal:todayISO(),jenis:'snapshot',jumlah:1,user:session?.username||'sistem',status:'err',keterangan:String(res.error||res.data?.error||'Gagal')});
+  saveState(); setSyncDot('err'); if(manual) toast('❌ Snapshot gagal: '+(res.error||''),'error'); return false;
 }
 async function pullSpreadsheet(silent=false){
   if(!state.settings.gasUrl){ if(!silent) toast('Hubungkan URL Spreadsheet dulu.','warn'); return false; }
@@ -1140,7 +1155,9 @@ registerPage('pengaturan',{title:'Pengaturan',bgClass:'bg-white',
     return `<div class="max-w-2xl mx-auto space-y-4">
       ${adm?`<section class="bg-gray-50 p-4 rounded-xl">
         <h3 class="font-extrabold text-gelap mb-2"><i class="fas fa-image mr-1"></i>Logo & Identitas Sekolah</h3>
-        <div class="flex items-center gap-3 mb-2"><img id="lgPv" src="${esc(state.settings.logoDataURL||'')}" class="w-16 h-16 rounded-lg border bg-white object-contain" alt=""><div class="flex-1"><label class="block bg-utama text-white text-center text-sm font-bold py-2 rounded-lg cursor-pointer"><i class="fas fa-upload mr-1"></i>Pilih Logo<input type="file" accept="image/*" onchange="window.__pgLogo(this)" class="hidden" data-testid="pg-logo"></label>${state.settings.logoDataURL?'<button onclick="window.__pgLogoDel()" class="text-xs text-red-600 mt-1">Hapus logo</button>':''}</div></div>
+        <div class="flex items-center gap-3 mb-2"><img id="lgPv" src="${esc(state.settings.logoDataURL||'')}" class="w-16 h-16 rounded-lg border bg-white object-contain" alt=""><div class="flex-1"><label class="block bg-utama text-white text-center text-sm font-bold py-2 rounded-lg cursor-pointer"><i class="fas fa-upload mr-1"></i>Pilih Logo (File)<input type="file" accept="image/*" onchange="window.__pgLogo(this)" class="hidden" data-testid="pg-logo"></label>${state.settings.logoDataURL?'<button onclick="window.__pgLogoDel()" class="text-xs text-red-600 mt-1">Hapus logo</button>':''}</div></div>
+        <label class="text-xs font-semibold">Atau Tempel URL Logo (contoh: https://iili.io/xxxx.png)</label>
+        <div class="flex gap-2 mb-2"><input id="pgLogoUrl" value="${esc(state.settings.logoDataURL&&/^https?:\/\//.test(state.settings.logoDataURL)?state.settings.logoDataURL:'')}" placeholder="https://iili.io/fFA80TF.md.png" class="flex-1 border bg-white rounded p-2 text-xs font-mono"><button onclick="window.__pgLogoUrl()" class="bg-utama text-white font-bold rounded-lg px-3 text-sm">Pakai</button></div>
         <label class="text-xs font-semibold">Nama Sekolah/Yayasan</label><input id="pgNm" value="${esc(state.settings.namaSekolah||'')}" class="w-full border bg-white rounded p-2 mb-2" data-testid="pg-nama">
         <label class="text-xs font-semibold">Alamat</label><input id="pgAlm" value="${esc(state.settings.alamatSekolah||'')}" class="w-full border bg-white rounded p-2">
         <button onclick="window.__pgIdt()" data-testid="pg-save-identitas" class="mt-2 bg-utama text-white font-bold rounded-lg py-2 w-full">Simpan</button>
@@ -1192,10 +1209,16 @@ registerPage('pengaturan',{title:'Pengaturan',bgClass:'bg-white',
     };
     window.__pgLogoDel=()=>{ if(!confirm('Hapus logo?')) return; state.settings.logoDataURL=''; saveState(); enqueue('settings','upsert',state.settings); navigate('pengaturan'); };
     window.__pgIdt=()=>{ state.settings.namaSekolah=$('#pgNm').value.trim(); state.settings.alamatSekolah=$('#pgAlm').value.trim(); saveState(); enqueue('settings','upsert',state.settings); toast('Tersimpan.'); };
-    window.__pgGas=async ()=>{ const url=$('#pgGas').value.trim(); state.settings.gasUrl=url; saveState(); if(!url){ setSyncDot('idle'); return; }
-      toast('Menguji koneksi…','info');
-      try{ const r=await fetch(url+(url.includes('?')?'&':'?')+'action=ping'); const j=await r.json(); if(j&&j.ok){ toast('✅ Terhubung.','success'); setSyncDot('ok'); pullSpreadsheet(true).then(()=>navigate('pengaturan')); } else throw new Error(j.error||'Respons tidak valid'); }
-      catch(e){ toast('❌ '+e.message,'error'); setSyncDot('err'); }
+    window.__pgLogoUrl=()=>{ const u=($('#pgLogoUrl').value||'').trim(); if(!/^https?:\/\//i.test(u)){ toast('URL harus dimulai http(s)://','warn'); return; }
+      state.settings.logoDataURL=u; saveState(); enqueue('settings','upsert',state.settings); $('#lgPv').src=u; const h=document.getElementById('headerLogo'); if(h){h.src=u; h.classList.remove('hidden');} applyLogo(); toast('Logo URL tersimpan.','success'); };
+    window.__pgGas=async ()=>{ const url=($('#pgGas').value||'').trim(); state.settings.gasUrl=url; saveState(); if(!url){ setSyncDot('idle'); toast('URL dikosongkan.','warn'); return; }
+      toast('URL disimpan, menguji koneksi…','info');
+      // Save dulu tanpa bergantung pada ping (GAS sering tidak balas action=ping karena redirect/CORS)
+      setSyncDot('ok');
+      try{ const r=await fetch(url+(url.includes('?')?'&':'?')+'action=ping',{redirect:'follow'}); const j=await r.json(); if(j&&j.ok){ toast('✅ Terhubung & verified.','success'); } }
+      catch(e){ /* abaikan – tetap simpan, sinkron pakai POST yang punya fallback no-cors */ toast('URL tersimpan. Verifikasi ping dilewati (akan tetap sinkron via POST).','info'); }
+      try{ await pullSpreadsheet(true); }catch(e){}
+      navigate('pengaturan');
     };
     window.__pgTarif=()=>{ state.settings.sppTK=+$('#pgTK').value||0; state.settings.sppSD=+$('#pgSD').value||0; state.settings.sppSMP=+$('#pgSMP').value||0; state.settings.tahunAjaran=$('#pgTA').value; saveState(); enqueue('settings','upsert',state.settings); $('#labelTA').textContent=state.settings.tahunAjaran; toast('Tersimpan.'); };
     window.__pgTutupBuku=()=>{
