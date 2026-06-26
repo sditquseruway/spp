@@ -190,21 +190,9 @@ const defaultState=()=>({
   users:[
     { id:'u_admin', username:'admin', password:'admin', nama:'Bendahara Pusat', role:'admin', no_wa:'', aktif:true, created_at:todayISO() }
   ],
-  siswa:[
-    { id:'s_1', nis:'2026001', nisn:'0123456789', nama:'Aisyah Putri', jenjang:'SD', kelas:'3', wali:'Bapak Ali', no_wa:'081234567890', tahun_ajaran:'2026/2027', status:'aktif', created_at:todayISO() },
-    { id:'s_2', nis:'2026002', nisn:'0123456788', nama:'Muhammad Fauzan', jenjang:'SMP', kelas:'7A', wali:'Bapak Hasan', no_wa:'082134567891', tahun_ajaran:'2026/2027', status:'aktif', created_at:todayISO() },
-    { id:'s_3', nis:'2026003', nisn:'0123456787', nama:'Khadijah Salsabila', jenjang:'TK', kelas:'A', wali:'Ibu Siti', no_wa:'085234567892', tahun_ajaran:'2026/2027', status:'aktif', created_at:todayISO() }
-  ],
+  siswa:[],
   transaksi:[],
-  kategori:[
-    { id:'k_1', nama:'Donasi / Infaq', tipe:'in', created_at:todayISO() },
-    { id:'k_2', nama:'Penjualan Seragam', tipe:'in', created_at:todayISO() },
-    { id:'k_3', nama:'Belanja ATK', tipe:'out', created_at:todayISO() },
-    { id:'k_4', nama:'Gaji Guru', tipe:'out', created_at:todayISO() },
-    { id:'k_5', nama:'Listrik & Air', tipe:'out', created_at:todayISO() },
-    { id:'k_h_out', nama:'Hutang Operasional', tipe:'out', created_at:todayISO() },
-    { id:'k_h_in', nama:'Hutang Operasional', tipe:'in', created_at:todayISO() }
-  ],
+  kategori:[],
   tunggakanLalu:[],
   bukuHutang:[],
   syncLog:[],
@@ -267,15 +255,17 @@ function setSyncDot(s){
   else t.textContent=state.settings.gasUrl?'Menunggu sinkronisasi':'Spreadsheet belum dihubungkan';
 }
 async function gasFetch(url, body){
-  // Coba normal dulu (bisa baca respons JSON)
+  // PENTING: jangan set header 'Content-Type' agar browser pakai text/plain
+  // → tidak memicu CORS preflight (OPTIONS) yang ditolak Apps Script.
   try{
-    const r=await fetch(url,{method:'POST',mode:'cors',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
-    const j=await r.json();
+    const r=await fetch(url,{method:'POST',redirect:'follow',body:JSON.stringify(body)});
+    const txt=await r.text();
+    let j; try{ j=JSON.parse(txt); }catch(_){ j={ok:true,raw:txt}; }
     return {ok:true,data:j};
   }catch(err){
-    // Fallback: no-cors fire-and-forget (request tetap dikirim ke GAS, hanya tidak bisa baca respons)
+    // Fallback: no-cors fire-and-forget (data tetap masuk ke Spreadsheet)
     try{
-      await fetch(url,{method:'POST',mode:'no-cors',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
+      await fetch(url,{method:'POST',mode:'no-cors',redirect:'follow',body:JSON.stringify(body)});
       return {ok:true,data:{ok:true,opaque:true}};
     }catch(e2){
       return {ok:false,error:err.message||String(err)};
@@ -319,20 +309,29 @@ async function pullSpreadsheet(silent=false){
   setSyncDot('sync');
   try{
     const u=state.settings.gasUrl; const sep=u.includes('?')?'&':'?';
-    const r=await fetch(u+sep+'action=pull'); const j=await r.json();
-    if(!j.ok) throw new Error(j.error||'Gagal pull');
-    // Replace data tabel-wise; keep settings local override for gasUrl
-    if(Array.isArray(j.Users) && j.Users.length) state.users=j.Users;
-    if(Array.isArray(j.Siswa) && j.Siswa.length) state.siswa=j.Siswa;
-    if(Array.isArray(j.Transaksi) && j.Transaksi.length) state.transaksi=j.Transaksi;
-    if(Array.isArray(j.Kategori) && j.Kategori.length) state.kategori=j.Kategori;
+    let j=null;
+    // Coba GET dulu (Apps Script doGet support CORS untuk simple GET)
+    try{
+      const r=await fetch(u+sep+'action=pull',{method:'GET',redirect:'follow'});
+      j=await r.json();
+    }catch(getErr){
+      // Fallback: POST action=pull (tidak preflight karena no Content-Type)
+      const res=await gasFetch(u,{action:'pull'});
+      if(!res.ok) throw new Error(res.error||'Gagal pull');
+      j=res.data;
+    }
+    if(!j || !j.ok) throw new Error((j&&j.error)||'Gagal pull');
+    // Replace data tabel-wise; jangan timpa gasUrl lokal
+    if(Array.isArray(j.Users)) state.users=j.Users.length?j.Users:state.users;
+    if(Array.isArray(j.Siswa)) state.siswa=j.Siswa;
+    if(Array.isArray(j.Transaksi)) state.transaksi=j.Transaksi;
+    if(Array.isArray(j.Kategori)) state.kategori=j.Kategori;
     if(Array.isArray(j.TunggakanLalu)) state.tunggakanLalu=j.TunggakanLalu;
     if(Array.isArray(j.BukuHutang)) state.bukuHutang=j.BukuHutang;
     if(j.Settings && typeof j.Settings==='object'){
       const localGas=state.settings.gasUrl;
       Object.assign(state.settings, j.Settings);
-      state.settings.gasUrl=localGas; // jangan ditimpa
-      // Numeric fields
+      state.settings.gasUrl=localGas;
       ['sppTK','sppSD','sppSMP'].forEach(k=>{ if(state.settings[k]!==undefined) state.settings[k]=Number(state.settings[k])||0; });
       if(typeof state.settings.tahunAjaranList==='string'){ try{ state.settings.tahunAjaranList=JSON.parse(state.settings.tahunAjaranList) }catch(e){} }
     }
@@ -597,7 +596,15 @@ window.__ISA__={state,queue,session,registerPage,navigate,toast,uid,esc,fmtIDR,f
 function boot(){
   applyLogo();
   if(!navigator.onLine) $('#offlineBanner').classList.add('show');
-  if(session) enterApp(); else { $('#loginScreen').classList.remove('hidden'); }
+  // Auto-pull dari Spreadsheet sebelum login agar Users/Siswa/Settings terisi dari database
+  if(state.settings.gasUrl && navigator.onLine){
+    pullSpreadsheet(true).finally(()=>{
+      applyLogo();
+      if(session) enterApp(); else { $('#loginScreen').classList.remove('hidden'); }
+    });
+  } else {
+    if(session) enterApp(); else { $('#loginScreen').classList.remove('hidden'); }
+  }
 }
 document.addEventListener('DOMContentLoaded', boot);
 
