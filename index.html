@@ -1,0 +1,1717 @@
+
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="theme-color" content="#064e3b" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Infaq Santri" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%23064e3b'/><text x='96' y='130' font-size='110' text-anchor='middle' fill='%23fbbf24' font-family='Arial Black' font-weight='900'>I</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{utama:'#059669',gelap:'#064e3b',aksen:'#fbbf24',latar:'#f8fafc'},fontFamily:{sans:['Plus Jakarta Sans','system-ui']}}}}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+<title>Infaq Santri App v3</title>
+<script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
+<!-- emergent-main.js dihapus: script eksternal ini memblokir klik menu setelah login -->
+<style>
+:root{--utama:#059669;--gelap:#064e3b;--aksen:#fbbf24;--latar:#f8fafc}
+html,body{margin:0;padding:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--latar);color:#1f2937;-webkit-tap-highlight-color:transparent}
+body{overflow:hidden;height:100vh}
+#root{display:none!important}
+.no-scrollbar{overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch}
+.no-scrollbar::-webkit-scrollbar{display:none}
+.bulan-checkbox:checked+label{background:var(--utama);color:#fff;border-color:var(--utama);box-shadow:0 4px 12px -2px rgba(5,150,105,.35)}
+.bulan-checkbox:disabled+label{background:#e2e8f0;color:#94a3b8;cursor:not-allowed;text-decoration:line-through}
+@keyframes slideDown{from{transform:translate(-50%,-120%);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+.toast-animate{animation:slideDown .35s cubic-bezier(.22,1.36,.6,1) forwards}
+.page-view{display:none}.page-view.active{display:block;animation:fadeIn .25s ease both}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.menu-btn{transition:transform .18s,box-shadow .18s}.menu-btn:active{transform:scale(.97)}.menu-btn:hover{transform:translateY(-2px);box-shadow:0 10px 25px -10px rgba(0,0,0,.15)}
+.sync-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.sync-dot.idle{background:#94a3b8}.sync-dot.ok{background:#10b981;box-shadow:0 0 8px #10b981}
+.sync-dot.err{background:#ef4444;box-shadow:0 0 8px #ef4444;animation:pulse 1.4s infinite}
+.sync-dot.sync{background:#f59e0b;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+#receiptCanvas{font-family:'Courier New','Roboto Mono',monospace;background:#fff;color:#000;width:320px;padding:14px 16px;margin:0 auto;font-size:12px;line-height:1.45}
+#receiptCanvas .r-logo{display:block;margin:0 auto 4px;max-width:60px;max-height:60px}
+#receiptCanvas .r-title{font-weight:800;text-align:center;font-size:14px;letter-spacing:.5px}
+#receiptCanvas .r-sub{text-align:center;font-size:11px}
+#receiptCanvas hr{border:none;border-top:1px dashed #444;margin:6px 0}
+#receiptCanvas .row{display:flex;justify-content:space-between;gap:8px}
+#receiptCanvas .row span:last-child{text-align:right}
+#receiptCanvas .total{font-size:14px;font-weight:800}
+.modal-backdrop{background:rgba(15,23,42,.6);backdrop-filter:blur(3px)}
+.offline-banner{position:fixed;top:0;left:0;right:0;background:#ef4444;color:#fff;text-align:center;font-size:12px;padding:6px 12px;z-index:60;transform:translateY(-100%);transition:transform .25s}
+.offline-banner.show{transform:translateY(0)}
+@media print{#emergent-badge,header,.no-print{display:none!important}body{overflow:visible!important}}
+.tunggakan-row{transition:background .15s}.tunggakan-row:hover{background:#fff7ed}
+.login-watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80vw;max-width:520px;opacity:.08;pointer-events:none;filter:brightness(0) invert(1)}
+.login-logo{filter:drop-shadow(0 4px 18px rgba(0,0,0,.45));max-width:96px;max-height:96px;margin:0 auto 8px}
+.metode-tab.active{background:var(--utama);color:#fff}
+.skeleton{background:linear-gradient(90deg,#e5e7eb 25%,#f3f4f6 50%,#e5e7eb 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:.5rem}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+</style>
+</head>
+<body class="bg-latar text-gray-800 h-screen flex flex-col">
+<noscript>Aktifkan JavaScript.</noscript>
+
+<div id="offlineBanner" class="offline-banner" data-testid="offline-banner"><i class="fas fa-wifi mr-1"></i>Mode Offline — perubahan akan disinkronkan otomatis saat online.</div>
+
+<div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] hidden toast-animate" data-testid="toast">
+  <div id="toastContent" class="flex items-center px-4 py-3 rounded-lg shadow-2xl text-white font-medium text-sm">
+    <i id="toastIcon" class="mr-2 text-lg"></i><span id="toastText">Pesan</span>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-500 overflow-hidden" style="background:linear-gradient(135deg,#064e3b 0%,#0f766e 100%)" data-testid="login-screen">
+  <img id="loginWatermark" class="login-watermark" alt="" />
+  <div class="relative z-10 text-center text-white px-6 w-full max-w-sm">
+    <img id="loginLogoFront" class="login-logo" alt="" style="display:none" />
+    <h1 class="text-3xl font-extrabold tracking-tight">Infaq Santri App</h1>
+    <p id="loginNamaSekolah" class="text-sm text-white/85 mt-1 font-semibold leading-tight">YAYASAN HUDA WAN NURUL QUR'ANI</p>
+    <p id="loginAlamatSekolah" class="text-[11px] text-white/70 mb-7">Tangsi Lama, Seruway, Aceh Tamiang</p>
+
+    <form onsubmit="prosesLogin(event)" class="bg-white/10 backdrop-blur-sm border border-white/20 p-5 rounded-2xl shadow-2xl text-left space-y-3">
+      <div>
+        <label class="block text-xs font-semibold text-white/90 mb-1.5 uppercase tracking-wide">Username</label>
+        <input type="text" id="logUser" required autocomplete="username" data-testid="login-username" class="w-full bg-white/95 border border-white/30 rounded-lg p-3 text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-aksen">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-white/90 mb-1.5 uppercase tracking-wide">Password</label>
+        <input type="password" id="logPass" required autocomplete="current-password" data-testid="login-password" class="w-full bg-white/95 border border-white/30 rounded-lg p-3 text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-aksen">
+      </div>
+      <button type="submit" data-testid="login-submit" class="w-full text-gelap bg-aksen hover:bg-yellow-400 active:scale-[.98] font-bold rounded-lg px-5 py-3 shadow-lg mt-1 transition">
+        <i class="fas fa-arrow-right-to-bracket mr-2"></i>Masuk
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header class="bg-gelap text-white shadow-lg px-4 py-3 flex justify-between items-center shrink-0 z-10 hidden" id="appHeader" data-testid="app-header">
+  <div class="flex items-center min-w-0">
+    <button id="btnBack" onclick="goHome()" data-testid="btn-back" class="hidden mr-2 text-lg w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition"><i class="fas fa-arrow-left"></i></button>
+    <img id="headerLogo" class="w-9 h-9 rounded-lg object-cover mr-2 hidden" alt="" />
+    <div class="min-w-0">
+      <h1 id="headerTitle" class="text-base font-bold truncate">Beranda</h1>
+      <p class="text-[10px] text-white/70 flex items-center gap-1.5"><span class="sync-dot idle" id="syncDot"></span><span id="syncStatusText">Belum tersinkron</span> · TA <span id="labelTA">2026/2027</span></p>
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <button onclick="manualSync()" data-testid="btn-sync" title="Sinkronkan" class="bg-aksen/20 hover:bg-aksen/30 text-aksen w-9 h-9 rounded-full flex items-center justify-center transition"><i class="fas fa-cloud-arrow-up text-sm"></i></button>
+    <div class="text-right hidden sm:block">
+      <p class="text-xs font-bold text-aksen" id="activeUserName">-</p>
+      <p class="text-[10px] text-white/70" id="activeUserRole">-</p>
+    </div>
+    <button onclick="logout()" data-testid="btn-logout" title="Keluar" class="bg-red-500 hover:bg-red-600 w-9 h-9 rounded-full flex items-center justify-center text-white transition"><i class="fas fa-power-off text-sm"></i></button>
+  </div>
+</header>
+
+<main class="flex-1 overflow-hidden relative hidden" id="mainWrapper"><div id="pageContainer" class="absolute inset-0"></div></main>
+<div id="modalRoot"></div>
+<div id="receiptHolder" style="position:fixed;left:-9999px;top:0"></div>
+
+<!-- badge Emergent dihapus -->
+<div id="root"></div>
+
+<script>
+/* ============================================================
+   INFAQ SANTRI APP — Single-file PWA
+   ============================================================ */
+(()=>{ 'use strict';
+
+/* ===== CONST ===== */
+const BULAN_LIST=['Juli','Agustus','September','Oktober','November','Desember','Januari','Februari','Maret','April','Mei','Juni'];
+const BULAN_FULL=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const JENJANG_LIST=['TK','SD','SMP'];
+const APP_KEY='isa_state_v2', QUEUE_KEY='isa_queue_v2', SESSION_KEY='isa_session_v2';
+
+/* ===== UTIL ===== */
+const $ =(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const fmtIDR=n=>'Rp '+(Number(n||0)).toLocaleString('id-ID');
+const todayISO=()=>new Date().toISOString();
+const uid=()=>'id_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDate=iso=>{ if(!iso)return'-'; try{return new Date(iso).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}catch{return iso} };
+const fmtDateTime=iso=>{ if(!iso)return'-'; try{return new Date(iso).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}catch{return iso} };
+const normalizeWA=s=>{ if(!s)return''; let n=String(s).replace(/[^\d]/g,''); if(n.startsWith('0'))n='62'+n.slice(1); else if(n.startsWith('8'))n='62'+n; return n; };
+const currentMonthIdx=()=>new Date().getMonth();
+const currentYear=()=>new Date().getFullYear();
+const taLabel=()=>state.settings.tahunAjaran||'2026/2027';
+
+/* TA: "2026/2027" → start year 2026 (Jul) end year 2027 (Jun) */
+function taYears(ta){ const [a,b]=String(ta||taLabel()).split('/').map(x=>parseInt(x,10)||0); return [a,b]; }
+function inTA(date, ta=taLabel()){ const d=date instanceof Date ? date : new Date(date); const [y1,y2]=taYears(ta); const t=d.getTime(); const start=new Date(y1,6,1).getTime(); const end=new Date(y2,5,30,23,59,59).getTime(); return t>=start && t<=end; }
+function bulanWajibInTA(ta=taLabel()){
+  const [y1,y2]=taYears(ta);
+  const now=new Date();
+  const taEnd=new Date(y2,5,30); // 30 Juni
+  const taStart=new Date(y1,6,1); // 1 Juli
+  const cur=now>taEnd?taEnd:(now<taStart?taStart:now);
+  const result=[];
+  for(const b of BULAN_LIST){
+    const mi=BULAN_FULL.indexOf(b);
+    const yr = mi>=6 ? y1 : y2;
+    const dateOfBulan=new Date(yr,mi,1);
+    if(dateOfBulan<=cur) result.push(b);
+  }
+  return result;
+}
+function bulanWajibSampai(bulanCap, ta=taLabel()){
+  if(!bulanCap) return bulanWajibInTA(ta);
+  const idx=BULAN_LIST.indexOf(bulanCap);
+  return idx>=0 ? BULAN_LIST.slice(0, idx+1) : bulanWajibInTA(ta);
+}
+
+/* ===== TOAST ===== */
+function toast(msg,type='success'){
+  const el=$('#toast'),cont=$('#toastContent'),ic=$('#toastIcon'),tx=$('#toastText');
+  tx.textContent=msg;
+  cont.className='flex items-center px-4 py-3 rounded-lg shadow-2xl text-white font-medium text-sm '+({success:'bg-emerald-600',error:'bg-red-600',warn:'bg-amber-500',info:'bg-sky-600'}[type]||'bg-gray-800');
+  ic.className='mr-2 text-lg fas '+({success:'fa-circle-check',error:'fa-circle-xmark',warn:'fa-triangle-exclamation',info:'fa-circle-info'}[type]||'fa-circle-info');
+  el.classList.remove('hidden');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.add('hidden'),2800);
+}
+window.toast=toast;
+
+/* ===== STATE ===== */
+const defaultState=()=>({
+  users:[
+    { id:'u_admin', username:'admin', password:'admin', nama:'Bendahara Pusat', role:'admin', no_wa:'', aktif:true, created_at:todayISO() }
+  ],
+  siswa:[
+    { id:'s_1', nis:'2026001', nisn:'0123456789', nama:'Aisyah Putri', jenjang:'SD', kelas:'3', wali:'Bapak Ali', no_wa:'081234567890', tahun_ajaran:'2026/2027', status:'aktif', created_at:todayISO() },
+    { id:'s_2', nis:'2026002', nisn:'0123456788', nama:'Muhammad Fauzan', jenjang:'SMP', kelas:'7A', wali:'Bapak Hasan', no_wa:'082134567891', tahun_ajaran:'2026/2027', status:'aktif', created_at:todayISO() },
+    { id:'s_3', nis:'2026003', nisn:'0123456787', nama:'Khadijah Salsabila', jenjang:'TK', kelas:'A', wali:'Ibu Siti', no_wa:'085234567892', tahun_ajaran:'2026/2027', status:'aktif', created_at:todayISO() }
+  ],
+  transaksi:[],
+  kategori:[
+    { id:'k_1', nama:'Donasi / Infaq', tipe:'in', created_at:todayISO() },
+    { id:'k_2', nama:'Penjualan Seragam', tipe:'in', created_at:todayISO() },
+    { id:'k_3', nama:'Belanja ATK', tipe:'out', created_at:todayISO() },
+    { id:'k_4', nama:'Gaji Guru', tipe:'out', created_at:todayISO() },
+    { id:'k_5', nama:'Listrik & Air', tipe:'out', created_at:todayISO() },
+    { id:'k_h_out', nama:'Hutang Operasional', tipe:'out', created_at:todayISO() },
+    { id:'k_h_in', nama:'Hutang Operasional', tipe:'in', created_at:todayISO() }
+  ],
+  tunggakanLalu:[],
+  bukuHutang:[],
+  syncLog:[],
+  settings:{
+    namaSekolah:"YAYASAN HUDA WAN NURUL QUR'ANI",
+    alamatSekolah:"Tangsi Lama, Seruway, Aceh Tamiang",
+    logoDataURL:'',
+    tahunAjaran:'2026/2027',
+    tahunAjaranList:['2026/2027'],
+    sppTK:150000, sppSD:200000, sppSMP:300000,
+    waSenderNumber:'',
+    waTemplate:`Assalamu'alaikum wr.wb.
+Yth. Wali Santri *{NAMA}*
+Kami informasikan tagihan SPP/Infaq:
+
+• Jenjang/Kelas: {JENJANG}/{KELAS}
+• Tahun Ajaran: {TA}
+• Total Tunggakan: *{TOTAL}*
+• Rincian: {RINCIAN}
+
+Mohon segera diselesaikan. Jazakumullahu khairan.
+_{SEKOLAH}_`,
+    gasUrl:'', lastSyncAt:null, lastSyncStatus:'idle'
+  }
+});
+let state=loadState();
+let queue=JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]');
+let session=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');
+
+function loadState(){
+  try{ const raw=localStorage.getItem(APP_KEY);
+    if(!raw){ const f=defaultState(); localStorage.setItem(APP_KEY,JSON.stringify(f)); return f; }
+    const p=JSON.parse(raw); const d=defaultState();
+    for(const k of Object.keys(d)) if(p[k]===undefined) p[k]=d[k];
+    for(const k of Object.keys(d.settings)) if(p.settings[k]===undefined) p.settings[k]=d.settings[k];
+    return p;
+  }catch(e){ console.error(e); return defaultState(); }
+}
+function saveState(){ localStorage.setItem(APP_KEY,JSON.stringify(state)); }
+function saveQueue(){ localStorage.setItem(QUEUE_KEY,JSON.stringify(queue)); }
+function saveSession(){ localStorage.setItem(SESSION_KEY,JSON.stringify(session)); }
+
+/* ===== SYNC ===== */
+function enqueue(entity,op,payload){
+  queue.push({op_id:uid(),entity,op,payload,ts:todayISO(),retry:0,status:'pending'});
+  saveQueue(); setSyncDot('sync');
+  // Auto-sync langsung tanpa delay – data terkirim ke Spreadsheet seketika
+  Promise.resolve().then(()=>flushQueue(false));
+}
+function setSyncDot(s){
+  const d=$('#syncDot'),t=$('#syncStatusText'); if(!d) return;
+  d.className='sync-dot '+s; state.settings.lastSyncStatus=s;
+  if(s==='sync') t.textContent='Menyinkronkan…';
+  else if(s==='ok') t.textContent='Tersinkron · '+(state.settings.lastSyncAt?fmtDateTime(state.settings.lastSyncAt):'baru saja');
+  else if(s==='err') t.textContent='Gagal sinkron — akan dicoba ulang';
+  else t.textContent=state.settings.gasUrl?'Menunggu sinkronisasi':'Spreadsheet belum dihubungkan';
+}
+async function flushQueue(manual=false){
+  if(!state.settings.gasUrl){ if(manual) toast('Hubungkan URL Spreadsheet dulu di Pengaturan.','warn'); setSyncDot('idle'); return false; }
+  if(!navigator.onLine){ setSyncDot('err'); return false; }
+  if(queue.length===0){ if(manual) return await pushSnapshot(true); setSyncDot('ok'); return true; }
+  setSyncDot('sync');
+  const batch=queue.filter(q=>q.status==='pending').slice(0,50);
+  if(!batch.length){ setSyncDot('ok'); return true; }
+  try{
+    const r=await fetch(state.settings.gasUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'push',ops:batch,user:session?.username||'sistem'})});
+    const j=await r.json();
+    if(!j.ok) throw new Error(j.error||'Gagal');
+    const ids=new Set(batch.map(b=>b.op_id));
+    queue=queue.filter(q=>!ids.has(q.op_id)); saveQueue();
+    state.settings.lastSyncAt=todayISO();
+    state.syncLog.unshift({id:uid(),tanggal:todayISO(),jenis:'push',jumlah:batch.length,user:session?.username||'sistem',status:'ok',keterangan:batch.length+' operasi terkirim'});
+    state.syncLog=state.syncLog.slice(0,200); saveState(); setSyncDot('ok');
+    if(manual) toast('✅ '+batch.length+' data tersinkron.','success');
+    return true;
+  }catch(err){
+    state.syncLog.unshift({id:uid(),tanggal:todayISO(),jenis:'push',jumlah:batch.length,user:session?.username||'sistem',status:'err',keterangan:String(err.message||err)});
+    saveState(); setSyncDot('err'); if(manual) toast('❌ Sinkronisasi gagal: '+(err.message||''),'error'); return false;
+  }
+}
+async function pushSnapshot(manual=false){
+  if(!state.settings.gasUrl) return false; setSyncDot('sync');
+  try{
+    const snap={users:state.users,siswa:state.siswa,transaksi:state.transaksi,kategori:state.kategori,tunggakanLalu:state.tunggakanLalu,bukuHutang:state.bukuHutang,settings:state.settings};
+    const r=await fetch(state.settings.gasUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'snapshot',data:snap,user:session?.username||'sistem'})});
+    const j=await r.json(); if(!j.ok) throw new Error(j.error||'Gagal');
+    state.settings.lastSyncAt=todayISO();
+    state.syncLog.unshift({id:uid(),tanggal:todayISO(),jenis:'snapshot',jumlah:1,user:session?.username||'sistem',status:'ok',keterangan:'Snapshot terkirim'});
+    saveState(); setSyncDot('ok'); if(manual) toast('✅ Snapshot terkirim ke Spreadsheet.','success'); return true;
+  }catch(err){
+    state.syncLog.unshift({id:uid(),tanggal:todayISO(),jenis:'snapshot',jumlah:1,user:session?.username||'sistem',status:'err',keterangan:String(err.message||err)});
+    saveState(); setSyncDot('err'); if(manual) toast('❌ Snapshot gagal: '+(err.message||''),'error'); return false;
+  }
+}
+async function pullSpreadsheet(silent=false){
+  if(!state.settings.gasUrl){ if(!silent) toast('Hubungkan URL Spreadsheet dulu.','warn'); return false; }
+  setSyncDot('sync');
+  try{
+    const u=state.settings.gasUrl; const sep=u.includes('?')?'&':'?';
+    const r=await fetch(u+sep+'action=pull'); const j=await r.json();
+    if(!j.ok) throw new Error(j.error||'Gagal pull');
+    // Replace data tabel-wise; keep settings local override for gasUrl
+    if(Array.isArray(j.Users) && j.Users.length) state.users=j.Users;
+    if(Array.isArray(j.Siswa) && j.Siswa.length) state.siswa=j.Siswa;
+    if(Array.isArray(j.Transaksi) && j.Transaksi.length) state.transaksi=j.Transaksi;
+    if(Array.isArray(j.Kategori) && j.Kategori.length) state.kategori=j.Kategori;
+    if(Array.isArray(j.TunggakanLalu)) state.tunggakanLalu=j.TunggakanLalu;
+    if(Array.isArray(j.BukuHutang)) state.bukuHutang=j.BukuHutang;
+    if(j.Settings && typeof j.Settings==='object'){
+      const localGas=state.settings.gasUrl;
+      Object.assign(state.settings, j.Settings);
+      state.settings.gasUrl=localGas; // jangan ditimpa
+      // Numeric fields
+      ['sppTK','sppSD','sppSMP'].forEach(k=>{ if(state.settings[k]!==undefined) state.settings[k]=Number(state.settings[k])||0; });
+      if(typeof state.settings.tahunAjaranList==='string'){ try{ state.settings.tahunAjaranList=JSON.parse(state.settings.tahunAjaranList) }catch(e){} }
+    }
+    state.settings.lastSyncAt=todayISO(); saveState(); setSyncDot('ok');
+    if(!silent) toast('✅ Data ditarik dari Spreadsheet.','success');
+    return true;
+  }catch(err){ setSyncDot('err'); if(!silent) toast('❌ Pull gagal: '+(err.message||''),'error'); return false; }
+}
+async function manualSync(){
+  await flushQueue(true);
+  if(state.settings.gasUrl){ await pushSnapshot(false); await pullSpreadsheet(true); }
+  if(currentPage) navigate(currentPage); // refresh tampilan
+}
+window.manualSync=manualSync;
+setInterval(()=>{ if(queue.some(q=>q.status==='pending')) flushQueue(false); },5000);
+window.addEventListener('online',()=>{ $('#offlineBanner').classList.remove('show'); flushQueue(false); });
+window.addEventListener('offline',()=>{ $('#offlineBanner').classList.add('show'); setSyncDot('err'); });
+
+/* ===== AUTH ===== */
+function prosesLogin(e){
+  e.preventDefault();
+  const u=$('#logUser').value.trim(), p=$('#logPass').value;
+  const user=state.users.find(x=>x.username.toLowerCase()===u.toLowerCase() && x.password===p && (x.aktif===true||x.aktif==='TRUE'||x.aktif==='true'||x.aktif===undefined));
+  if(!user){ toast('Username atau password salah.','error'); return; }
+  session={id:user.id,username:user.username,nama:user.nama,role:user.role};
+  saveSession(); enterApp();
+  // attempt silent pull on login
+  if(state.settings.gasUrl){ pullSpreadsheet(true).then(()=>{ if(currentPage==='home') navigate('home'); }); }
+}
+window.prosesLogin=prosesLogin;
+function logout(){
+  if(!confirm('Keluar dari aplikasi?')) return;
+  session=null; localStorage.removeItem(SESSION_KEY); location.reload();
+}
+window.logout=logout;
+function enterApp(){
+  $('#loginScreen').classList.add('hidden');
+  $('#appHeader').classList.remove('hidden');
+  $('#mainWrapper').classList.remove('hidden');
+  applyLogo();
+  $('#activeUserName').textContent=session.nama;
+  $('#activeUserRole').textContent=session.role==='admin'?'Bendahara Pusat':'Guru';
+  $('#labelTA').textContent=state.settings.tahunAjaran;
+  setSyncDot(state.settings.gasUrl?'ok':'idle');
+  navigate('home');
+}
+function applyLogo(){
+  const url=state.settings.logoDataURL||'';
+  const f=$('#loginLogoFront'); const w=$('#loginWatermark'); const h=$('#headerLogo');
+  if(url){ f.src=url; f.style.display='block'; w.src=url; h.src=url; h.classList.remove('hidden'); }
+  else { f.style.display='none'; w.removeAttribute('src'); h.classList.add('hidden'); }
+  $('#loginNamaSekolah').textContent=state.settings.namaSekolah||'';
+  $('#loginAlamatSekolah').textContent=state.settings.alamatSekolah||'';
+}
+
+/* ===== ROUTER ===== */
+const PAGES={};
+let currentPage='home';
+function registerPage(name,def){ PAGES[name]=def; }
+function navigate(name,params={}){
+  if(!PAGES[name]) return;
+  if(PAGES[name].adminOnly && session.role!=='admin'){ toast('Akses khusus admin.','warn'); return; }
+  currentPage=name;
+  $('#headerTitle').textContent=PAGES[name].title||name;
+  $('#btnBack').classList.toggle('hidden', name==='home');
+  $('#pageContainer').innerHTML=`<div class="page-view active no-scrollbar absolute inset-0 ${PAGES[name].bgClass||'bg-latar'} p-4 md:p-6" data-testid="page-${name}">${PAGES[name].render(params)||''}</div>`;
+  if(PAGES[name].mounted) PAGES[name].mounted(params);
+  window.scrollTo(0,0);
+}
+window.navigate=navigate;
+window.goHome=()=>navigate('home');
+
+/* ===== MODAL ===== */
+function modalBox(title,body){
+  return `<div class="fixed inset-0 z-[80] flex items-center justify-center modal-backdrop p-4" onclick="if(event.target===this) closeModal()" data-testid="modal">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-y-auto no-scrollbar">
+      <div class="flex items-center justify-between p-4 border-b border-gray-100">
+        <h3 class="font-extrabold text-gelap text-base">${title}</h3>
+        <button type="button" onclick="closeModal()" data-testid="modal-close" class="text-gray-400 hover:text-gray-700 w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center"><i class="fas fa-xmark text-xl"></i></button>
+      </div>
+      <div class="p-4">${body}</div>
+    </div></div>`;
+}
+function openModal(html){ $('#modalRoot').innerHTML=html; }
+function closeModal(){ $('#modalRoot').innerHTML=''; }
+window.closeModal=closeModal;
+
+/* ===== HELPERS: SPP / TUNGGAKAN ===== */
+function getSppTarif(jenjang){ return Number({TK:state.settings.sppTK,SD:state.settings.sppSD,SMP:state.settings.sppSMP}[jenjang]||0); }
+function sppTrxBySiswa(id,ta=taLabel()){ return state.transaksi.filter(t=>t.tipe==='spp_in' && t.siswa_id===id && (t.tahun_ajaran||taLabel())===ta); }
+function bulanTerbayar(id,ta=taLabel()){ const set=new Set(); sppTrxBySiswa(id,ta).forEach(t=>{ const b=Array.isArray(t.bulan)?t.bulan:(t.bulan?String(t.bulan).split(',').map(s=>s.trim()).filter(Boolean):[]); b.forEach(x=>set.add(x)); }); return set; }
+function terbayarRp(id,ta=taLabel()){ return sppTrxBySiswa(id,ta).reduce((s,t)=>s+Number(t.nominal||0),0); }
+function tunggakanLaluSiswa(s){
+  return state.tunggakanLalu.filter(t =>
+    (s.nis && t.nis && String(t.nis)===String(s.nis)) ||
+    (s.nisn && t.nisn && String(t.nisn)===String(s.nisn)) ||
+    (s.nama && t.nama && String(t.nama).trim().toLowerCase()===String(s.nama).trim().toLowerCase())
+  );
+}
+function tunggakanLaluTotal(s){ return tunggakanLaluSiswa(s).reduce((sm,t)=>sm+Number(t.jumlah||0),0); }
+function hitungTunggakan(s,opts={}){
+  const ta=opts.ta||taLabel();
+  const sampaiBulan=opts.sampaiBulan||null;
+  const tarif=getSppTarif(s.jenjang);
+  const bulanWajib= sampaiBulan ? bulanWajibSampai(sampaiBulan,ta) : bulanWajibInTA(ta);
+  const expected=bulanWajib.length*tarif;
+  const paid=terbayarRp(s.id,ta);
+  const tBerjalan=Math.max(0,expected-paid);
+  const tLalu=tunggakanLaluTotal(s);
+  return { tarif, bulanWajib, expected, paid, tBerjalan, tLalu, total: tBerjalan + tLalu };
+}
+
+/* ===== SALDO ===== */
+function isAdmin(){ return session?.role==='admin'; }
+function isInMasuk(t){ return ['spp_in','kas_in'].includes(t.tipe); }
+function isOutKas(t){ return t.tipe==='kas_out'; }
+function saldoMetode(metode, sumber='bendahara'){
+  let s=0;
+  state.transaksi.forEach(t=>{
+    if(t.tipe==='internal_move'){
+      if(t.from_metode===metode) s -= Number(t.nominal||0);
+      if(t.to_metode===metode)   s += Number(t.nominal||0);
+      return;
+    }
+    if((t.sumber||'tangan')!==sumber) return;
+    if((t.metode||'cash')!==metode) return;
+    if(isInMasuk(t)) s += Number(t.nominal||0);
+    else if(isOutKas(t)) s -= Number(t.nominal||0);
+  });
+  // Setoran masuk dari guru menambah bendahara pada metode masing-masing
+  if(sumber==='bendahara'){
+    state.transaksi.forEach(t=>{
+      if(t.tipe==='setor' && (t.metode||'cash')===metode){
+        s += Number(t.nominal||0); // dianggap sudah include di kas_in dengan sumber bendahara, namun di setor masuk: pakai ref_setor_id ke kas_in
+      }
+    });
+    // Avoid double count: simpler — saldo bendahara = sum of all transactions with sumber=bendahara, by metode
+  }
+  return s;
+}
+/* Simpler & robust per-metode bendahara */
+function saldoBendaharaCash(){ return saldoSumberMetode('bendahara','cash'); }
+function saldoBendaharaTransfer(){ return saldoSumberMetode('bendahara','transfer'); }
+function saldoSumberMetode(sumber, metode){
+  let s=0;
+  state.transaksi.forEach(t=>{
+    if(t.tipe==='internal_move'){
+      if(t.from_metode===metode) s -= Number(t.nominal||0);
+      if(t.to_metode===metode)   s += Number(t.nominal||0);
+      return;
+    }
+    if((t.sumber||'tangan')!==sumber) return;
+    const tm = t.metode || 'cash';
+    if(tm!==metode) return;
+    if(isInMasuk(t)) s += Number(t.nominal||0);
+    else if(isOutKas(t)) s -= Number(t.nominal||0);
+  });
+  return s;
+}
+function saldoUserDiTangan(userId){
+  let s=0;
+  state.transaksi.forEach(t=>{
+    if(t.input_user_id!==userId) return;
+    if((t.sumber||'tangan')!=='tangan') return;
+    if(t.tipe==='spp_in'||t.tipe==='kas_in') s += Number(t.nominal||0);
+    else if(t.tipe==='kas_out') s -= Number(t.nominal||0);
+    else if(t.tipe==='setor') s -= Number(t.nominal||0);
+  });
+  return s;
+}
+function totalSekolah(){ return saldoBendaharaCash()+saldoBendaharaTransfer(); }
+function adminUser(){ return state.users.find(u=>u.role==='admin') || { id:'u_admin', nama:'Bendahara Pusat' }; }
+
+/* ===== BUKU HUTANG: derived from kas + manual ===== */
+function rekapHutang(){
+  const entries=[];
+  state.transaksi.forEach(t=>{
+    if(t.kategori==='Hutang Operasional'){
+      if(t.tipe==='kas_out') entries.push({ id:'t_'+t.id, tanggal:t.tanggal, keterangan:'(Pinjam) '+(t.keterangan||'-'), jumlah_pinjam:Number(t.nominal||0), jumlah_bayar:0, input_user_nama:t.input_user_nama||'-', source:'kas' });
+      else if(t.tipe==='kas_in') entries.push({ id:'t_'+t.id, tanggal:t.tanggal, keterangan:'(Bayar) '+(t.keterangan||'-'), jumlah_pinjam:0, jumlah_bayar:Number(t.nominal||0), input_user_nama:t.input_user_nama||'-', source:'kas' });
+    }
+  });
+  state.bukuHutang.forEach(h=>entries.push({...h, source:h.source||'manual'}));
+  entries.sort((a,b)=> new Date(b.tanggal||b.created_at) - new Date(a.tanggal||a.created_at));
+  const totPinjam = entries.reduce((s,e)=>s+Number(e.jumlah_pinjam||0),0);
+  const totBayar  = entries.reduce((s,e)=>s+Number(e.jumlah_bayar||0),0);
+  return { entries, totPinjam, totBayar, sisa: totPinjam-totBayar };
+}
+
+/* ====== DASHBOARD ====== */
+registerPage('home',{
+  title:'Beranda', bgClass:'bg-gray-50',
+  render(){
+    const admin=isAdmin();
+    const cash = admin ? saldoBendaharaCash() : saldoUserDiTangan(session.id);
+    const transfer = admin ? saldoBendaharaTransfer() : 0;
+    const total = cash + transfer;
+    let totalTg=0, jml=0;
+    state.siswa.filter(s=>(s.status||'aktif')==='aktif').forEach(s=>{ const c=hitungTunggakan(s); if(c.total>0){ totalTg+=c.total; jml++; } });
+    const adminMenu = admin ? `
+      <h3 class="font-bold text-gray-600 mb-3 text-sm tracking-wide uppercase">Menu Bendahara Pusat</h3>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+        ${mb('admin-user','fa-user-cog','Kelola User')}
+        ${mb('admin-kategori','fa-tags','Kategori Kas')}
+        ${mb('admin-tunggakan-lalu','fa-clock-rotate-left','Tunggakan Lalu')}
+        ${mb('admin-buku-hutang','fa-book','Buku Hutang')}
+        ${mb('admin-jurnal-siswa','fa-receipt','Jurnal Harian Siswa')}
+        ${mb('admin-jurnal-kas','fa-book-open','Buku Kas Harian')}
+        ${mb('admin-laporan','fa-file-pdf','Laporan Bulanan')}
+        ${mb('admin-rekap-guru','fa-users-rectangle','Saldo Per Guru')}
+        ${mb('setor','fa-paper-plane','Status Setoran')}
+        ${mb('transfer-internal','fa-right-left','Tarik/Setor Transfer')}
+        ${mb('log-sync','fa-list-check','Log Sinkronisasi')}
+        ${mb('pengaturan','fa-gear','Pengaturan')}
+      </div>` : `
+      <div class="grid grid-cols-2 gap-3">
+        ${mb('log-sync','fa-list-check','Log Sinkronisasi')}
+        ${mb('pengaturan','fa-gear','Pengaturan')}
+      </div>`;
+    return `
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div class="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl shadow-xl p-5 text-white">
+          <p class="text-xs text-emerald-100 mb-1 uppercase tracking-wide">${admin?'Saldo Bendahara Pusat':'Saldo di Tangan'}</p>
+          <h2 class="text-3xl font-extrabold tracking-tight" data-testid="dash-saldo">${fmtIDR(total)}</h2>
+          ${admin?`<div class="grid grid-cols-2 gap-2 mt-2 text-xs">
+            <div class="bg-white/15 rounded-lg p-2"><p class="text-emerald-100">💵 Cash</p><p class="font-bold" data-testid="saldo-cash">${fmtIDR(cash)}</p></div>
+            <div class="bg-white/15 rounded-lg p-2"><p class="text-emerald-100">🏦 Transfer</p><p class="font-bold" data-testid="saldo-transfer">${fmtIDR(transfer)}</p></div>
+          </div>`:''}
+          <div class="flex flex-wrap gap-2 mt-3">
+            ${!admin?`<button data-testid="btn-setor" onclick="navigate('setor')" class="bg-white text-emerald-700 hover:bg-emerald-50 text-xs font-bold py-2 px-4 rounded-full shadow"><i class="fas fa-paper-plane mr-1"></i>Setor ke Bendahara</button>`:''}
+            <button onclick="navigate('rekap')" class="bg-white/15 hover:bg-white/25 text-white text-xs font-bold py-2 px-4 rounded-full"><i class="fas fa-chart-pie mr-1"></i>Rekap Kas</button>
+          </div>
+        </div>
+        <div class="bg-gradient-to-br from-rose-500 to-red-700 rounded-2xl shadow-xl p-5 text-white cursor-pointer" onclick="navigate('tunggakan')" data-testid="card-tunggakan">
+          <p class="text-xs text-rose-100 mb-1 uppercase tracking-wide">Total Tunggakan Santri</p>
+          <h2 class="text-3xl font-extrabold mb-1 tracking-tight">${fmtIDR(totalTg)}</h2>
+          <p class="text-xs text-rose-100 mb-3"><b>${jml}</b> santri menunggak · TA ${taLabel()}</p>
+          <button class="bg-white text-red-700 hover:bg-red-50 text-xs font-bold py-2 px-4 rounded-full shadow"><i class="fas fa-search mr-1"></i>Lihat Detail</button>
+        </div>
+      </div>
+      <h3 class="font-bold text-gray-600 mb-3 text-sm tracking-wide uppercase">Menu Utama</h3>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        ${mb('spp','fa-hand-holding-dollar','Bayar SPP','bg-white','text-blue-600 bg-blue-50')}
+        ${mb('kas','fa-arrow-right-arrow-left','Kas Masuk/Keluar','bg-white','text-purple-600 bg-purple-50')}
+        ${mb('siswa','fa-users','Data Siswa','bg-white','text-orange-600 bg-orange-50')}
+        ${mb('rekap','fa-chart-pie','Rekap Kas','bg-white','text-teal-600 bg-teal-50')}
+      </div>
+      ${adminMenu}`;
+  }
+});
+function mb(page,icon,label,btn='bg-slate-800 text-white',ic='text-aksen bg-white/10'){
+  if(btn==='bg-white') ic=ic||'text-emerald-600 bg-emerald-50';
+  return `<button data-testid="menu-${page}" onclick="navigate('${page}')" class="menu-btn ${btn} p-4 rounded-xl shadow-sm text-center flex flex-col items-center gap-2">
+    <div class="w-11 h-11 rounded-full flex items-center justify-center text-lg ${ic}"><i class="fas ${icon}"></i></div>
+    <span class="text-xs md:text-sm font-semibold">${label}</span>
+  </button>`;
+}
+
+window.__ISA__={state,queue,session,registerPage,navigate,toast,uid,esc,fmtIDR,fmtDate,fmtDateTime,modalBox,openModal,closeModal,saveState,saveQueue,enqueue,hitungTunggakan,getSppTarif,bulanTerbayar,sppTrxBySiswa,tunggakanLaluSiswa,tunggakanLaluTotal,normalizeWA,bulanWajibInTA,bulanWajibSampai,saldoBendaharaCash,saldoBendaharaTransfer,saldoUserDiTangan,totalSekolah,adminUser,rekapHutang,taLabel,pullSpreadsheet,pushSnapshot,flushQueue,BULAN_LIST,BULAN_FULL,JENJANG_LIST,$,$$ ,isAdmin,inTA,taYears};
+
+/* ===== BOOT ===== */
+function boot(){
+  applyLogo();
+  if(!navigator.onLine) $('#offlineBanner').classList.add('show');
+  if(session) enterApp(); else { $('#loginScreen').classList.remove('hidden'); }
+}
+document.addEventListener('DOMContentLoaded', boot);
+
+})();
+</script>
+
+<!-- PAGES MODULE (continuation) -->
+<script id="pagesScript">
+(()=>{ 'use strict';
+const K=window.__ISA__; if(!K) return;
+const {state,registerPage,navigate,toast,uid,esc,fmtIDR,fmtDate,fmtDateTime,modalBox,openModal,closeModal,saveState,saveQueue,enqueue,hitungTunggakan,getSppTarif,bulanTerbayar,sppTrxBySiswa,tunggakanLaluSiswa,tunggakanLaluTotal,normalizeWA,bulanWajibInTA,bulanWajibSampai,saldoBendaharaCash,saldoBendaharaTransfer,saldoUserDiTangan,totalSekolah,adminUser,rekapHutang,taLabel,pullSpreadsheet,pushSnapshot,flushQueue,BULAN_LIST,BULAN_FULL,JENJANG_LIST,$,$$,isAdmin,inTA,taYears}=K;
+const sess=()=>JSON.parse(localStorage.getItem('isa_session_v2')||'null');
+const sek=()=>state.settings.namaSekolah||"";
+const alm=()=>state.settings.alamatSekolah||"";
+
+/* ====== BAYAR SPP ====== */
+registerPage('spp',{title:'Bayar SPP',bgClass:'bg-white',
+  render(){ return `
+    <div class="max-w-3xl mx-auto">
+      <div class="relative mb-3">
+        <i class="fas fa-search absolute left-4 top-3.5 text-gray-400"></i>
+        <input id="sppC" type="text" data-testid="spp-search" oninput="window.__sppS(this.value)" class="w-full bg-gray-50 border border-gray-200 rounded-full pl-12 pr-4 py-3 focus:bg-white focus:border-utama focus:ring-2 focus:ring-green-100 outline-none transition" placeholder="Cari Nama Siswa / NIS / NISN…" />
+      </div>
+      <div id="sppH" class="mb-4 max-h-52 overflow-y-auto border border-gray-100 rounded-xl hidden divide-y bg-white shadow-sm"></div>
+      <div id="sppP" class="hidden"></div>
+    </div>`; },
+  mounted(){
+    window.__sppS=(q)=>{ const w=$('#sppH'); q=(q||'').trim().toLowerCase();
+      if(!q){ w.classList.add('hidden'); w.innerHTML=''; return; }
+      const hits=state.siswa.filter(s=>(s.status||'aktif')==='aktif' && (s.nama.toLowerCase().includes(q)||String(s.nis||'').toLowerCase().includes(q)||String(s.nisn||'').toLowerCase().includes(q))).slice(0,15);
+      w.classList.remove('hidden');
+      w.innerHTML = hits.length ? hits.map(s=>`<button data-testid="spp-hit-${s.id}" onclick="window.__sppP('${s.id}')" class="w-full text-left p-3 hover:bg-emerald-50 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">${esc(s.nama[0]||'?')}</div>
+        <div class="flex-1 min-w-0"><p class="font-semibold text-sm truncate">${esc(s.nama)}</p><p class="text-[11px] text-gray-500">NIS ${esc(s.nis||'-')} · ${esc(s.jenjang)} · Kelas ${esc(s.kelas||'-')}</p></div>
+        <i class="fas fa-chevron-right text-gray-300"></i></button>`).join('') : '<div class="p-3 text-sm text-gray-500 text-center">Siswa tidak ditemukan.</div>';
+    };
+    window.__sppP=(id)=>renderSppPanel(id);
+  }
+});
+function renderSppPanel(id){
+  const s=state.siswa.find(x=>x.id===id); if(!s) return;
+  $('#sppH').classList.add('hidden'); $('#sppC').value='';
+  const calc=hitungTunggakan(s);
+  const tarif=calc.tarif, tb=bulanTerbayar(id), terbayar=calc.paid;
+  const tagihanTahun=BULAN_LIST.length*tarif, sisa=Math.max(0,tagihanTahun-terbayar);
+  const grid=BULAN_LIST.map((b,i)=>`<input type="checkbox" id="bln_${i}" value="${b}" class="bulan-checkbox hidden" ${tb.has(b)?'disabled checked':''} onchange="window.__sppT()">
+    <label for="bln_${i}" class="border border-gray-200 text-center text-xs font-semibold rounded-lg py-2 cursor-pointer block transition">${b.slice(0,3)}</label>`).join('');
+  $('#sppP').classList.remove('hidden');
+  $('#sppP').innerHTML=`
+    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100 mb-4">
+      <h4 class="font-extrabold text-gelap text-lg border-b border-emerald-200 pb-2 mb-2" data-testid="spp-nama">${esc(s.nama)}</h4>
+      <div class="grid grid-cols-2 gap-y-1 text-sm">
+        <p class="text-gray-600">NIS / NISN:</p><p class="text-right font-medium">${esc(s.nis||'-')} / ${esc(s.nisn||'-')}</p>
+        <p class="text-gray-600">Jenjang / Kelas:</p><p class="text-right font-medium">${esc(s.jenjang)} / ${esc(s.kelas||'-')}</p>
+        <p class="text-gray-600">Tagihan/Bulan:</p><p class="text-right font-bold">${fmtIDR(tarif)}</p>
+        <p class="text-gray-600">Total 1 Tahun:</p><p class="text-right font-bold">${fmtIDR(tagihanTahun)}</p>
+        <p class="text-gray-600">Sudah Terbayar:</p><p class="text-right font-bold text-emerald-700">${fmtIDR(terbayar)}</p>
+        <div class="col-span-2 border-t border-emerald-200 my-1"></div>
+        <p class="text-gray-600">Sisa Tahun Ini:</p><p class="text-right font-bold text-red-600">${fmtIDR(sisa)}</p>
+        ${calc.tLalu>0?`<p class="text-gray-600">Tunggakan Tahun Lalu:</p><p class="text-right font-bold text-red-700">${fmtIDR(calc.tLalu)}</p>`:''}
+      </div>
+    </div>
+    <div class="flex border-b border-gray-200 mb-3"><button type="button" onclick="window.__sppTab('ceklis')" id="tabCk" class="flex-1 py-2 text-center font-semibold text-utama border-b-2 border-utama">Pilih Bulan</button><button type="button" onclick="window.__sppTab('manual')" id="tabMn" class="flex-1 py-2 text-center font-semibold text-gray-400 border-b-2 border-transparent">Input Manual</button></div>
+    <div class="mb-3"><label class="text-xs font-semibold text-gray-700 mr-2">Metode:</label>
+      <div class="inline-flex bg-gray-100 rounded-full p-1 text-xs">
+        <button type="button" data-testid="spp-cash" onclick="window.__sppM('cash')" id="mC" class="metode-tab active px-3 py-1.5 rounded-full font-semibold">💵 Cash</button>
+        <button type="button" data-testid="spp-transfer" onclick="window.__sppM('transfer')" id="mT" class="metode-tab px-3 py-1.5 rounded-full font-semibold text-gray-600">🏦 Transfer</button>
+      </div>
+    </div>
+    <form onsubmit="window.__sppOK(event)">
+      <div id="mCk" class="mb-4"><p class="text-xs text-gray-500 mb-2">Tagihan per bulan: <strong>${fmtIDR(tarif)}</strong></p><div class="grid grid-cols-3 sm:grid-cols-4 gap-2">${grid}</div></div>
+      <div id="mMn" class="hidden mb-4 space-y-3">
+        <div><label class="block text-xs font-semibold text-gray-700 mb-1">Nominal (Rp)</label><input type="number" id="sppMan" oninput="window.__sppT()" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-3 focus:bg-white outline-none"></div>
+        <div><label class="block text-xs font-semibold text-gray-700 mb-1">Keterangan</label><input type="text" id="sppKet" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-3 focus:bg-white outline-none"></div>
+      </div>
+      <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col gap-3">
+        <div class="flex justify-between items-center"><span class="font-medium text-gray-700">Total Bayar:</span><span id="sppTot" data-testid="spp-total" class="font-extrabold text-utama text-2xl">Rp 0</span></div>
+        <button type="submit" data-testid="spp-submit" class="w-full bg-utama hover:bg-green-700 text-white font-bold py-3 rounded-lg shadow"><i class="fas fa-floppy-disk mr-2"></i>Simpan & Cetak Resi</button>
+      </div>
+    </form>`;
+  window.__sppMode='ceklis'; window.__sppMet='cash'; window.__sppCur={siswa:s,tarif};
+  window.__sppTab=(m)=>{ window.__sppMode=m;
+    $('#mCk').classList.toggle('hidden',m!=='ceklis'); $('#mMn').classList.toggle('hidden',m!=='manual');
+    ['tabCk','tabMn'].forEach(id=>{ const e=$('#'+id); e.classList.remove('text-utama','border-utama','text-gray-400','border-transparent'); });
+    $('#tabCk').classList.add(m==='ceklis'?'text-utama':'text-gray-400', m==='ceklis'?'border-utama':'border-transparent');
+    $('#tabMn').classList.add(m==='manual'?'text-utama':'text-gray-400', m==='manual'?'border-utama':'border-transparent');
+    window.__sppT();
+  };
+  window.__sppM=(m)=>{ window.__sppMet=m; $('#mC').classList.toggle('active',m==='cash'); $('#mT').classList.toggle('active',m==='transfer'); };
+  window.__sppT=()=>{ let total=0;
+    if(window.__sppMode==='ceklis') total = $$('.bulan-checkbox').filter(c=>c.checked&&!c.disabled).length * window.__sppCur.tarif;
+    else total = Number($('#sppMan').value||0);
+    $('#sppTot').textContent=fmtIDR(total); window.__sppCur.total=total;
+  };
+  window.__sppOK=(ev)=>{ ev.preventDefault();
+    const {siswa,tarif}=window.__sppCur; let bulan=[],nominal=0,ket='';
+    if(window.__sppMode==='ceklis'){
+      bulan=$$('.bulan-checkbox').filter(c=>c.checked&&!c.disabled).map(c=>c.value);
+      if(!bulan.length){ toast('Pilih minimal 1 bulan.','warn'); return; }
+      nominal=bulan.length*tarif; ket='SPP '+bulan.join(', ');
+    } else { nominal=Number($('#sppMan').value||0); ket=$('#sppKet').value.trim()||'Pembayaran SPP (manual)';
+      if(nominal<=0){ toast('Nominal harus > 0.','warn'); return; } }
+    const u=sess(); const trx={ id:uid(), tipe:'spp_in', tanggal:new Date().toISOString(), tahun_ajaran:taLabel(), metode:window.__sppMet,
+      siswa_id:siswa.id, nama_siswa:siswa.nama, nis:siswa.nis, nisn:siswa.nisn, jenjang:siswa.jenjang, kelas:siswa.kelas,
+      bulan, nominal, kategori:'SPP', keterangan:ket,
+      input_user_id:u.id, input_user_nama:u.nama, input_user_role:u.role,
+      sumber: u.role==='admin'?'bendahara':'tangan', created_at:new Date().toISOString() };
+    state.transaksi.unshift(trx); saveState(); enqueue('transaksi','upsert',trx);
+    toast('✅ Pembayaran tersimpan.','success'); setTimeout(()=>navigate('receipt',{id:trx.id}),400);
+  };
+  window.__sppT();
+}
+
+/* ====== KAS ====== */
+registerPage('kas',{title:'Kas Masuk / Keluar',bgClass:'bg-white',
+  render(){ return `<div class="max-w-3xl mx-auto">
+    <div class="flex border-b border-gray-200 mb-3">
+      <button onclick="window.__kT('in')" id="kTi" data-testid="kas-tab-in" class="flex-1 py-2 text-center font-semibold text-utama border-b-2 border-utama"><i class="fas fa-arrow-down mr-1"></i>Kas Masuk</button>
+      <button onclick="window.__kT('out')" id="kTo" data-testid="kas-tab-out" class="flex-1 py-2 text-center font-semibold text-gray-400 border-b-2 border-transparent"><i class="fas fa-arrow-up mr-1"></i>Kas Keluar</button>
+    </div>
+    <div class="mb-3"><label class="text-xs font-semibold text-gray-700 mr-2">Metode:</label>
+      <div class="inline-flex bg-gray-100 rounded-full p-1 text-xs">
+        <button type="button" onclick="window.__kM('cash')" id="kmC" data-testid="kas-metode-cash" class="metode-tab active px-3 py-1.5 rounded-full font-semibold">💵 Cash</button>
+        <button type="button" onclick="window.__kM('transfer')" id="kmT" data-testid="kas-metode-transfer" class="metode-tab px-3 py-1.5 rounded-full font-semibold text-gray-600">🏦 Transfer</button>
+      </div>
+    </div>
+    <form onsubmit="window.__kS(event)" class="space-y-3 mb-5" data-testid="kas-form">
+      <div><label class="block text-xs font-semibold text-gray-700 mb-1">Tanggal</label><input type="date" id="kT" required class="w-full border border-gray-200 bg-gray-50 rounded-lg p-3"></div>
+      <div><label class="block text-xs font-semibold text-gray-700 mb-1">Kategori</label><select id="kK" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-3"></select></div>
+      <div><label class="block text-xs font-semibold text-gray-700 mb-1">Nominal (Rp)</label><input type="number" id="kN" required min="1" data-testid="kas-nominal" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-3"></div>
+      <div><label class="block text-xs font-semibold text-gray-700 mb-1">Keterangan</label><input type="text" id="kK2" placeholder="Rincian transaksi…" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-3"></div>
+      <button type="submit" data-testid="kas-submit" class="w-full bg-utama hover:bg-green-700 text-white font-bold py-3 rounded-lg shadow"><i class="fas fa-floppy-disk mr-2"></i>Simpan Catatan Kas</button>
+    </form>
+    <h3 class="font-bold text-gray-700 mb-2 text-sm">10 Transaksi Terakhir Anda</h3>
+    <div id="kL" class="divide-y divide-gray-100 border border-gray-100 rounded-xl bg-white"></div>
+  </div>`; },
+  mounted(){
+    $('#kT').value=new Date().toISOString().slice(0,10);
+    window.__kasMode='in'; window.__kasMet='cash';
+    window.__kT=(m)=>{ window.__kasMode=m; ['kTi','kTo'].forEach(i=>{ const e=$('#'+i); e.classList.remove('text-utama','border-utama','text-gray-400','border-transparent'); });
+      $('#kTi').classList.add(m==='in'?'text-utama':'text-gray-400', m==='in'?'border-utama':'border-transparent');
+      $('#kTo').classList.add(m==='out'?'text-utama':'text-gray-400', m==='out'?'border-utama':'border-transparent');
+      $('#kK').innerHTML = state.kategori.filter(k=>k.tipe===m).map(k=>`<option value="${esc(k.nama)}">${esc(k.nama)}</option>`).join('')||'<option value="">(tambah kategori dulu)</option>';
+    };
+    window.__kM=(m)=>{ window.__kasMet=m; $('#kmC').classList.toggle('active',m==='cash'); $('#kmT').classList.toggle('active',m==='transfer'); };
+    window.__kT('in');
+    window.__kR=()=>{ const u=sess(); const mine=state.transaksi.filter(t=>(t.tipe==='kas_in'||t.tipe==='kas_out')&&t.input_user_id===u.id).slice(0,10);
+      $('#kL').innerHTML = mine.length ? mine.map(t=>{ const iIn=t.tipe==='kas_in';
+        return `<div class="p-3 flex items-center gap-3" data-testid="kas-row-${t.id}">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm ${iIn?'bg-emerald-100 text-emerald-700':'bg-red-100 text-red-700'}"><i class="fas ${iIn?'fa-arrow-down':'fa-arrow-up'}"></i></div>
+          <div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">${esc(t.kategori)} <span class="text-[10px] bg-gray-100 px-1.5 rounded">${(t.metode||'cash')==='cash'?'💵':'🏦'}</span></p><p class="text-[11px] text-gray-500 truncate">${esc(t.keterangan||'-')} · ${fmtDate(t.tanggal)}</p></div>
+          <p class="${iIn?'text-emerald-700':'text-red-700'} font-bold text-sm">${iIn?'+':'-'}${fmtIDR(t.nominal)}</p>
+        </div>`; }).join('') : '<p class="p-4 text-sm text-gray-400 text-center">Belum ada transaksi.</p>'; };
+    window.__kR();
+    window.__kS=(ev)=>{ ev.preventDefault(); const u=sess(); const m=window.__kasMode;
+      const kat=$('#kK').value, n=Number($('#kN').value||0), tgl=new Date($('#kT').value||new Date()).toISOString(), ket=$('#kK2').value.trim();
+      if(!kat){ toast('Pilih kategori dulu.','warn'); return; }
+      if(n<=0){ toast('Nominal tidak valid.','warn'); return; }
+      const trx={ id:uid(), tipe: m==='in'?'kas_in':'kas_out', tanggal:tgl, tahun_ajaran:taLabel(), metode:window.__kasMet,
+        kategori:kat, nominal:n, keterangan:ket,
+        input_user_id:u.id, input_user_nama:u.nama, input_user_role:u.role,
+        sumber: u.role==='admin'?'bendahara':'tangan', created_at:new Date().toISOString() };
+      state.transaksi.unshift(trx); saveState(); enqueue('transaksi','upsert',trx);
+      toast('✅ Catatan kas tersimpan.'+(kat==='Hutang Operasional'?' (Tercatat di Buku Hutang)':''),'success');
+      $('#kN').value=''; $('#kK2').value=''; $('#kT').value=new Date().toISOString().slice(0,10);
+      window.__kR();
+    };
+  }
+});
+
+/* ====== DATA SISWA ====== */
+registerPage('siswa',{title:'Data Siswa',bgClass:'bg-white',
+  render(){
+    const adm=isAdmin();
+    return `<div class="max-w-5xl mx-auto">
+      <div class="flex gap-2 mb-3 flex-wrap">
+        <input id="sC" oninput="window.__sR()" data-testid="siswa-search" placeholder="Cari nama / NIS / NISN…" class="flex-1 min-w-[180px] bg-gray-50 border border-gray-200 rounded-lg p-3 outline-none">
+        <select id="sJ" onchange="window.__sR()" class="bg-gray-50 border border-gray-200 rounded-lg p-3"><option value="">Semua Jenjang</option>${JENJANG_LIST.map(j=>`<option>${j}</option>`).join('')}</select>
+        <select id="sT" onchange="window.__sR()" class="bg-gray-50 border border-gray-200 rounded-lg p-3"><option value="">Semua TA</option>${(state.settings.tahunAjaranList||[taLabel()]).map(t=>`<option ${t===taLabel()?'selected':''}>${t}</option>`).join('')}</select>
+        ${adm?`<button onclick="window.__sF()" data-testid="siswa-add" class="bg-utama text-white font-bold px-4 rounded-lg"><i class="fas fa-plus"></i></button>
+        <button onclick="window.__sImport()" data-testid="siswa-bulk" class="bg-sky-600 text-white font-bold px-3 rounded-lg" title="Import"><i class="fas fa-file-import"></i></button>`:''}
+      </div>
+      ${adm?`<div class="flex gap-2 mb-3 flex-wrap items-center text-xs">
+        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="sChkAll" onchange="window.__sCA(this)" data-testid="siswa-checkall"> <b>Pilih Semua</b></label>
+        <button onclick="window.__sDelSel()" data-testid="siswa-del-selected" class="ml-auto bg-red-600 text-white font-bold px-3 py-1.5 rounded-lg disabled:opacity-50" id="sDelBtn" disabled><i class="fas fa-trash mr-1"></i>Hapus Terpilih (<span id="sCnt">0</span>)</button>
+        <button onclick="window.__sDelAlumni()" data-testid="siswa-del-alumni" class="bg-amber-600 text-white font-bold px-3 py-1.5 rounded-lg" title="Hapus siswa berstatus alumni / tamat"><i class="fas fa-user-graduate mr-1"></i>Hapus Tamat</button>
+      </div>`:''}
+      <div id="sL" class="divide-y border rounded-xl bg-white"></div>
+    </div>`;
+  },
+  mounted(){
+    const adm=isAdmin();
+    window.__sR=()=>{ const q=($('#sC').value||'').toLowerCase(), J=$('#sJ').value, T=$('#sT').value;
+      let list=state.siswa.slice();
+      if(q) list=list.filter(s=>s.nama.toLowerCase().includes(q)||String(s.nis||'').toLowerCase().includes(q)||String(s.nisn||'').toLowerCase().includes(q));
+      if(J) list=list.filter(s=>s.jenjang===J);
+      if(T) list=list.filter(s=>(s.tahun_ajaran||taLabel())===T);
+      list.sort((a,b)=>a.nama.localeCompare(b.nama));
+      $('#sL').innerHTML = list.length ? list.map(s=>{ const c=hitungTunggakan(s); const st=(s.status||'aktif');
+        return `<div class="p-3 flex items-center gap-3 hover:bg-gray-50" data-testid="siswa-row-${s.id}">
+          ${adm?`<input type="checkbox" class="sChk" data-id="${s.id}" onchange="window.__sCnt()">`:''}
+          <div class="w-10 h-10 rounded-full ${st==='aktif'?'bg-emerald-100 text-emerald-700':'bg-gray-200 text-gray-500'} flex items-center justify-center font-bold">${esc(s.nama[0]||'?')}</div>
+          <div class="flex-1 min-w-0"><p class="font-semibold text-sm">${esc(s.nama)} ${st!=='aktif'?'<span class="text-[10px] bg-gray-200 px-1.5 rounded">'+esc(st)+'</span>':''}</p>
+            <p class="text-[11px] text-gray-500">NIS ${esc(s.nis||'-')} · NISN ${esc(s.nisn||'-')} · ${esc(s.jenjang)}/${esc(s.kelas||'-')} · TA ${esc(s.tahun_ajaran||'-')}</p>
+            ${c.total>0?`<p class="text-[11px] text-red-600 font-semibold">Tunggakan: ${fmtIDR(c.total)}</p>`:''}</div>
+          ${adm?`<button onclick="window.__sF('${s.id}')" class="text-blue-600 px-2"><i class="fas fa-pen"></i></button><button onclick="window.__sDel('${s.id}')" class="text-red-600 px-2"><i class="fas fa-trash"></i></button>`:''}
+        </div>`; }).join('') : '<p class="p-4 text-sm text-gray-400 text-center">Tidak ada data.</p>';
+      window.__sCnt();
+    };
+    window.__sR();
+    window.__sCA=(c)=>{ $$('.sChk').forEach(x=>x.checked=c.checked); window.__sCnt(); };
+    window.__sCnt=()=>{ const n=$$('.sChk').filter(c=>c.checked).length; const btn=$('#sDelBtn'), cnt=$('#sCnt'); if(cnt) cnt.textContent=n; if(btn) btn.disabled=n===0; };
+    window.__sDelSel=()=>{ const ids=$$('.sChk').filter(c=>c.checked).map(c=>c.dataset.id); if(!ids.length) return;
+      if(!confirm('Hapus '+ids.length+' siswa terpilih? Riwayat transaksi tidak terhapus.')) return;
+      ids.forEach(id=>{ state.siswa=state.siswa.filter(s=>s.id!==id); enqueue('siswa','delete',{id}); });
+      saveState(); window.__sR(); toast(ids.length+' siswa dihapus.','info');
+    };
+    window.__sDelAlumni=()=>{ const al=state.siswa.filter(s=>(s.status||'')==='alumni'||(s.status||'')==='tamat'); if(!al.length){ toast('Tidak ada siswa berstatus alumni/tamat.','info'); return; }
+      if(!confirm('Hapus '+al.length+' siswa berstatus alumni/tamat?')) return;
+      al.forEach(s=>{ state.siswa=state.siswa.filter(x=>x.id!==s.id); enqueue('siswa','delete',{id:s.id}); });
+      saveState(); window.__sR(); toast(al.length+' alumni dihapus.','info');
+    };
+    window.__sF=(id)=>{ const s=id?state.siswa.find(x=>x.id===id):{id:'',nis:'',nisn:'',nama:'',jenjang:'SD',kelas:'',wali:'',no_wa:'',tahun_ajaran:taLabel(),status:'aktif'};
+      openModal(modalBox((id?'Edit':'Tambah')+' Siswa',`
+        <form onsubmit="window.__sSave(event,'${id||''}')" class="space-y-3" data-testid="siswa-form">
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="text-xs font-semibold">NIS</label><input id="f_nis" value="${esc(s.nis||'')}" class="w-full border rounded p-2 bg-gray-50"></div>
+            <div><label class="text-xs font-semibold">NISN</label><input id="f_nisn" value="${esc(s.nisn||'')}" class="w-full border rounded p-2 bg-gray-50"></div>
+          </div>
+          <div><label class="text-xs font-semibold">Nama Lengkap *</label><input id="f_nama" required value="${esc(s.nama||'')}" data-testid="siswa-nama" class="w-full border rounded p-2 bg-gray-50"></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="text-xs font-semibold">Jenjang *</label><select id="f_j" class="w-full border rounded p-2 bg-gray-50">${JENJANG_LIST.map(j=>`<option ${j===s.jenjang?'selected':''}>${j}</option>`).join('')}</select></div>
+            <div><label class="text-xs font-semibold">Kelas</label><input id="f_k" value="${esc(s.kelas||'')}" class="w-full border rounded p-2 bg-gray-50"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="text-xs font-semibold">Tahun Ajaran</label><select id="f_t" class="w-full border rounded p-2 bg-gray-50">${(state.settings.tahunAjaranList||[taLabel()]).map(t=>`<option ${t===(s.tahun_ajaran||taLabel())?'selected':''}>${t}</option>`).join('')}</select></div>
+            <div><label class="text-xs font-semibold">Status</label><select id="f_st" class="w-full border rounded p-2 bg-gray-50">${['aktif','alumni','tamat','non-aktif'].map(x=>`<option ${x===(s.status||'aktif')?'selected':''}>${x}</option>`).join('')}</select></div>
+          </div>
+          <div><label class="text-xs font-semibold">Nama Wali</label><input id="f_w" value="${esc(s.wali||'')}" class="w-full border rounded p-2 bg-gray-50"></div>
+          <div><label class="text-xs font-semibold">No WhatsApp Wali</label><input id="f_wa" value="${esc(s.no_wa||'')}" class="w-full border rounded p-2 bg-gray-50"></div>
+          <div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 border rounded-lg p-2.5 font-semibold">Batal</button><button type="submit" data-testid="siswa-save" class="flex-1 bg-utama text-white rounded-lg p-2.5 font-semibold">Simpan</button></div>
+        </form>`));
+    };
+    window.__sSave=(e,id)=>{ e.preventDefault();
+      const d={ id:id||uid(), nis:$('#f_nis').value.trim(), nisn:$('#f_nisn').value.trim(), nama:$('#f_nama').value.trim(), jenjang:$('#f_j').value, kelas:$('#f_k').value.trim(), wali:$('#f_w').value.trim(), no_wa:$('#f_wa').value.trim(), tahun_ajaran:$('#f_t').value, status:$('#f_st').value, updated_at:new Date().toISOString() };
+      if(id){ const i=state.siswa.findIndex(s=>s.id===id); if(i>=0) state.siswa[i]={...state.siswa[i], ...d}; }
+      else { d.created_at=new Date().toISOString(); state.siswa.unshift(d); }
+      saveState(); enqueue('siswa','upsert',d); closeModal(); window.__sR(); toast('✅ Tersimpan.');
+    };
+    window.__sDel=(id)=>{ if(!confirm('Hapus siswa? Riwayat transaksi tidak terhapus.')) return;
+      state.siswa=state.siswa.filter(x=>x.id!==id); saveState(); enqueue('siswa','delete',{id}); window.__sR(); toast('Dihapus.','info');
+    };
+    window.__sImport=()=>{ openModal(modalBox('Import Massal Siswa',`
+      <p class="text-xs text-gray-600 mb-2">Tempel data dengan format: <code class="bg-gray-100 px-1 rounded">nama,nis,nisn,jenjang,kelas,wali,no_wa</code></p>
+      <button onclick="window.__sTemplate()" class="text-xs text-sky-600 underline mb-2"><i class="fas fa-download mr-1"></i>Unduh Template CSV</button>
+      <textarea id="bImp" rows="8" placeholder="Aisyah,2026001,0123456789,SD,3,Bapak Ali,081234567890&#10;Fauzan,2026002,...,SMP,7A,Bapak Hasan,082134567891" class="w-full border rounded p-2 bg-gray-50 font-mono text-xs" data-testid="siswa-bulk-text"></textarea>
+      <button onclick="window.__sBulkDo()" data-testid="siswa-bulk-import" class="w-full bg-utama text-white font-bold py-2 rounded-lg mt-2">Import</button>`));
+    };
+    window.__sTemplate=()=>{ const csv='nama,nis,nisn,jenjang,kelas,wali,no_wa\nContoh Siswa,2026001,0123456789,SD,3,Bapak Ali,081234567890\n';
+      const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download='template_siswa.csv'; a.click();
+    };
+    window.__sBulkDo=()=>{ const raw=$('#bImp').value.trim(); if(!raw) return;
+      const lines=raw.split(/\r?\n/).filter(l=>l.trim());
+      let ok=0;
+      lines.forEach(l=>{ if(l.toLowerCase().startsWith('nama,')) return; // skip header
+        const p=l.split(/[,;	]/).map(x=>x.trim());
+        const [nama,nis,nisn,jen,kel,wali,wa]=p;
+        if(!nama) return;
+        const d={ id:uid(), nama, nis:nis||'', nisn:nisn||'', jenjang:JENJANG_LIST.includes(jen)?jen:'SD', kelas:kel||'', wali:wali||'', no_wa:wa||'', tahun_ajaran:taLabel(), status:'aktif', created_at:new Date().toISOString() };
+        state.siswa.unshift(d); enqueue('siswa','upsert',d); ok++;
+      });
+      saveState(); closeModal(); window.__sR(); toast('✅ '+ok+' siswa terimport.','success');
+    };
+  }
+});
+
+/* ====== REKAP KAS ====== */
+registerPage('rekap',{title:'Rekap Kas',bgClass:'bg-white',
+  render(){ const now=new Date();
+    return `<div class="max-w-4xl mx-auto">
+      <div class="grid grid-cols-3 gap-2 mb-3">
+        <select id="rB" onchange="window.__rR()" class="border bg-gray-50 rounded-lg p-2.5"><option value="">Semua Bulan</option>${BULAN_FULL.map((b,i)=>`<option value="${i}" ${i===now.getMonth()?'selected':''}>${b}</option>`).join('')}</select>
+        <select id="rY" onchange="window.__rR()" class="border bg-gray-50 rounded-lg p-2.5">${[now.getFullYear()-1,now.getFullYear(),now.getFullYear()+1].map(y=>`<option ${y===now.getFullYear()?'selected':''}>${y}</option>`).join('')}</select>
+        <select id="rT" onchange="window.__rR()" class="border bg-gray-50 rounded-lg p-2.5"><option value="">Semua TA</option>${(state.settings.tahunAjaranList||[taLabel()]).map(t=>`<option ${t===taLabel()?'selected':''}>${t}</option>`).join('')}</select>
+      </div>
+      <div id="rS" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3"></div>
+      <button onclick="window.__rPDF()" data-testid="rekap-pdf" class="w-full bg-rose-600 text-white text-sm font-bold py-2 rounded-lg mb-3"><i class="fas fa-file-pdf mr-1"></i>Unduh PDF Detail</button>
+      <div id="rL" class="divide-y border rounded-xl bg-white max-h-[55vh] overflow-y-auto"></div>
+    </div>`; },
+  mounted(){
+    window.__rF=()=>{ const m=$('#rB').value,y=$('#rY').value,t=$('#rT').value;
+      return state.transaksi.filter(tr=>{ const d=new Date(tr.tanggal); if(y&&d.getFullYear()!==+y) return false; if(m!==''&&d.getMonth()!==+m) return false;
+        if(t && (tr.tahun_ajaran||taLabel())!==t) return false;
+        if(sess().role!=='admin') return tr.input_user_id===sess().id; return true;
+      });
+    };
+    window.__rR=()=>{ const list=window.__rF(); let mC=0,mT=0,kC=0,kT=0;
+      list.forEach(tr=>{ const m=tr.metode||'cash';
+        if(['spp_in','kas_in'].includes(tr.tipe)){ if(m==='cash')mC+=+tr.nominal; else mT+=+tr.nominal; }
+        else if(tr.tipe==='kas_out'){ if(m==='cash')kC+=+tr.nominal; else kT+=+tr.nominal; }
+      });
+      const masuk=mC+mT, keluar=kC+kT;
+      $('#rS').innerHTML=`
+        <div class="bg-emerald-50 rounded-xl p-3 text-center"><p class="text-[10px] text-emerald-700 uppercase font-bold">Kas Masuk</p><p class="font-extrabold text-emerald-700 text-sm" data-testid="rekap-masuk">${fmtIDR(masuk)}</p><p class="text-[10px] text-gray-500">💵${fmtIDR(mC)} · 🏦${fmtIDR(mT)}</p></div>
+        <div class="bg-rose-50 rounded-xl p-3 text-center"><p class="text-[10px] text-rose-700 uppercase font-bold">Kas Keluar</p><p class="font-extrabold text-rose-700 text-sm">${fmtIDR(keluar)}</p><p class="text-[10px] text-gray-500">💵${fmtIDR(kC)} · 🏦${fmtIDR(kT)}</p></div>
+        <div class="bg-sky-50 rounded-xl p-3 text-center"><p class="text-[10px] text-sky-700 uppercase font-bold">Saldo</p><p class="font-extrabold text-sky-700 text-sm">${fmtIDR(masuk-keluar)}</p></div>
+        <div class="bg-amber-50 rounded-xl p-3 text-center"><p class="text-[10px] text-amber-700 uppercase font-bold">Transaksi</p><p class="font-extrabold text-amber-700 text-sm">${list.length}</p></div>`;
+      $('#rL').innerHTML = list.length ? list.slice(0,300).map(tr=>{ const iIn=['spp_in','kas_in'].includes(tr.tipe);
+        return `<div class="p-3 flex items-center gap-3" data-testid="rekap-row-${tr.id}">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm ${iIn?'bg-emerald-100 text-emerald-700':'bg-red-100 text-red-700'}"><i class="fas ${iIn?'fa-arrow-down':'fa-arrow-up'}"></i></div>
+          <div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">${esc(tr.kategori||(tr.tipe==='spp_in'?'SPP '+(tr.nama_siswa||''):tr.tipe))} <span class="text-[10px] bg-gray-100 px-1 rounded">${(tr.metode||'cash')==='cash'?'💵':'🏦'}</span></p>
+            <p class="text-[11px] text-gray-500 truncate">${esc(tr.keterangan||'-')} · ${fmtDate(tr.tanggal)} · oleh ${esc(tr.input_user_nama||'-')}</p></div>
+          <p class="${iIn?'text-emerald-700':'text-red-700'} font-bold text-sm">${iIn?'+':'-'}${fmtIDR(tr.nominal)}</p>
+        </div>`; }).join('') : '<p class="p-4 text-sm text-gray-400 text-center">Tidak ada transaksi.</p>';
+    };
+    window.__rR();
+    window.__rPDF=()=>generatePDF(window.__rF(), $('#rB').value, $('#rY').value, $('#rT').value);
+  }
+});
+
+function generatePDF(list,m,y,ta){
+  const { jsPDF } = window.jspdf || {};
+  if(!jsPDF){ toast('PDF belum siap.','warn'); return; }
+  const doc=new jsPDF({unit:'pt',format:'a4'});
+  const bL=m===''?'Semua Bulan':BULAN_FULL[+m];
+  const headerY = state.settings.logoDataURL ? 95 : 50;
+  if(state.settings.logoDataURL){
+    try{ doc.addImage(state.settings.logoDataURL,'PNG',265,20,60,60,undefined,'FAST'); }catch(e){}
+  }
+  doc.setFont('helvetica','bold').setFontSize(13).text('LAPORAN KEUANGAN', 297, headerY,{align:'center'});
+  doc.setFontSize(11).text(sek(), 297, headerY+18,{align:'center'});
+  doc.setFont('helvetica','normal').setFontSize(9).text(alm(), 297, headerY+32,{align:'center'});
+  doc.setFontSize(10).text(`Periode: ${bL} ${y||''} ${ta?'· TA '+ta:''}`, 297, headerY+50,{align:'center'});
+
+  let mC=0,kC=0;
+  const rows=list.map((t,i)=>{ const iIn=['spp_in','kas_in'].includes(t.tipe); if(iIn) mC+=+t.nominal||0; else if(t.tipe==='kas_out') kC+=+t.nominal||0;
+    return [i+1, fmtDate(t.tanggal), (t.kategori||t.tipe), (t.keterangan||'-'), (t.input_user_nama||'-'), (t.metode||'cash'), iIn?fmtIDR(t.nominal):'-', !iIn?fmtIDR(t.nominal):'-'];
+  });
+  doc.autoTable({ startY: headerY+68,
+    head:[['No','Tanggal','Kategori','Keterangan','Oleh','Metode','Masuk','Keluar']],
+    body: rows, styles:{fontSize:8,cellPadding:3}, headStyles:{fillColor:[5,150,105]},
+    columnStyles:{6:{halign:'right'},7:{halign:'right'}}
+  });
+  let y2=doc.lastAutoTable.finalY+14;
+  doc.setFont('helvetica','bold').setFontSize(10);
+  doc.text(`Total Masuk : ${fmtIDR(mC)}`, 40, y2);
+  doc.text(`Total Keluar: ${fmtIDR(kC)}`, 40, y2+14);
+  doc.text(`Saldo Akhir : ${fmtIDR(mC-kC)}`, 40, y2+28);
+
+  // Detail hutang
+  const h = rekapHutang();
+  if(h.entries.length){
+    y2 += 50;
+    doc.setFontSize(11).text('Buku Hutang', 40, y2);
+    doc.autoTable({ startY: y2+6,
+      head:[['Tgl','Keterangan','Pinjam','Bayar']],
+      body: h.entries.map(e=>[fmtDate(e.tanggal), e.keterangan||'-', fmtIDR(e.jumlah_pinjam||0), fmtIDR(e.jumlah_bayar||0)]),
+      styles:{fontSize:8}, headStyles:{fillColor:[239,68,68]},
+      columnStyles:{2:{halign:'right'},3:{halign:'right'}}
+    });
+    y2=doc.lastAutoTable.finalY+10;
+    doc.setFontSize(10).text(`Total Hutang Tersisa: ${fmtIDR(h.sisa)}`, 40, y2);
+  }
+
+  // Detail tunggakan
+  const tg=state.siswa.filter(s=>(s.status||'aktif')==='aktif').map(s=>({s,c:hitungTunggakan(s)})).filter(x=>x.c.total>0).sort((a,b)=>b.c.total-a.c.total);
+  if(tg.length){
+    y2 += 30; if(y2>720){ doc.addPage(); y2=50; }
+    doc.setFontSize(11).text('Rincian Tunggakan Santri (TA '+taLabel()+')', 40, y2);
+    doc.autoTable({ startY: y2+6,
+      head:[['Nama','Jenjang/Kelas','NIS','Bln Belum','Tunggakan Lalu','Total']],
+      body: tg.map(({s,c})=>[s.nama,(s.jenjang+'/'+(s.kelas||'-')), s.nis||'-', (c.bulanWajib.length - (c.bulanWajib.length - c.tBerjalan/Math.max(1,c.tarif))), fmtIDR(c.tLalu), fmtIDR(c.total)]),
+      styles:{fontSize:8}, headStyles:{fillColor:[244,63,94]},
+      columnStyles:{4:{halign:'right'},5:{halign:'right'}}
+    });
+    y2=doc.lastAutoTable.finalY+8;
+    doc.setFontSize(10).text(`Total Tunggakan : ${fmtIDR(tg.reduce((s,x)=>s+x.c.total,0))} · ${tg.length} santri`, 40, y2);
+  }
+
+  doc.save(`Laporan_${bL}_${y||''}.pdf`);
+  toast('✅ PDF diunduh.','success');
+}
+
+/* ====== TUNGGAKAN ====== */
+registerPage('tunggakan',{title:'Data Tunggakan',bgClass:'bg-white',
+  render(){ return `<div class="max-w-4xl mx-auto">
+    <div id="tgS" class="grid grid-cols-2 gap-2 mb-3"></div>
+    <div class="flex gap-2 mb-3 flex-wrap">
+      <input id="tgC" oninput="window.__tR()" data-testid="tg-search" placeholder="Cari nama / NIS / NISN…" class="flex-1 min-w-[200px] bg-gray-50 border border-gray-200 rounded-lg p-3 outline-none">
+      <select id="tgBln" onchange="window.__tR()" data-testid="tg-bulan" class="bg-gray-50 border border-gray-200 rounded-lg p-3"><option value="">Sampai Bulan Berjalan</option>${BULAN_LIST.map(b=>`<option>${b}</option>`).join('')}</select>
+      <select id="tgTA" onchange="window.__tR()" class="bg-gray-50 border border-gray-200 rounded-lg p-3">${(state.settings.tahunAjaranList||[taLabel()]).map(t=>`<option ${t===taLabel()?'selected':''}>${t}</option>`).join('')}</select>
+      <button onclick="window.__tWAAll()" data-testid="tg-wa-all" class="bg-[#25D366] text-white font-bold px-4 rounded-lg"><i class="fab fa-whatsapp mr-1"></i>Kirim Semua</button>
+    </div>
+    <div id="tL" class="divide-y border rounded-xl bg-white max-h-[60vh] overflow-y-auto"></div>
+  </div><div id="tgModal"></div>`; },
+  mounted(){
+    window.__tR=()=>{ const q=($('#tgC').value||'').toLowerCase(), bln=$('#tgBln').value, ta=$('#tgTA').value;
+      const items=state.siswa.filter(s=>(s.status||'aktif')==='aktif')
+        .map(s=>({s,c:hitungTunggakan(s,{ta:ta||taLabel(), sampaiBulan:bln||null})}))
+        .filter(x=>x.c.total>0)
+        .filter(x=>!q || x.s.nama.toLowerCase().includes(q)||String(x.s.nis||'').toLowerCase().includes(q)||String(x.s.nisn||'').toLowerCase().includes(q))
+        .sort((a,b)=>b.c.total-a.c.total);
+      const tot=items.reduce((s,x)=>s+x.c.total,0);
+      $('#tgS').innerHTML=`
+        <div class="bg-rose-50 rounded-xl p-3 text-center"><p class="text-[10px] text-rose-700 uppercase font-bold">Total Tunggakan</p><p class="font-extrabold text-rose-700 text-base" data-testid="tg-total">${fmtIDR(tot)}</p></div>
+        <div class="bg-amber-50 rounded-xl p-3 text-center"><p class="text-[10px] text-amber-700 uppercase font-bold">Jumlah Siswa</p><p class="font-extrabold text-amber-700 text-base" data-testid="tg-count">${items.length}</p></div>`;
+      $('#tL').innerHTML = items.length ? items.map(({s,c})=>`
+        <div class="tunggakan-row p-3 flex items-center gap-3" data-testid="tg-row-${s.id}">
+          <div class="w-9 h-9 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-sm">${esc(s.nama[0]||'?')}</div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold truncate">${esc(s.nama)}</p>
+            <p class="text-[11px] text-gray-500">${esc(s.jenjang)}/${esc(s.kelas||'-')} · NIS ${esc(s.nis||'-')}</p>
+            <p class="text-[11px] text-rose-700 font-semibold">Tunggakan: ${fmtIDR(c.total)}${c.tLalu>0?` <span class="text-amber-700">(termasuk lalu ${fmtIDR(c.tLalu)})</span>`:''}</p>
+          </div>
+          <div class="flex flex-col gap-1">
+            <button onclick="window.__tDet('${s.id}')" data-testid="tg-bayar-${s.id}" class="bg-emerald-600 text-white text-xs font-bold py-1.5 px-3 rounded-lg">Detail</button>
+            <button onclick="window.__tWA('${s.id}')" data-testid="tg-wa-${s.id}" class="bg-[#25D366] text-white text-xs font-bold py-1.5 px-3 rounded-lg"><i class="fab fa-whatsapp"></i> WA</button>
+          </div>
+        </div>`).join('') : '<p class="p-4 text-sm text-gray-400 text-center">Tidak ada tunggakan.</p>';
+    };
+    window.__tR();
+    window.__tDet=(id)=>{ const s=state.siswa.find(x=>x.id===id), c=hitungTunggakan(s,{ta:$('#tgTA').value||taLabel(), sampaiBulan:$('#tgBln').value||null}), riw=sppTrxBySiswa(id);
+      openModal(modalBox('Detail Tunggakan',`
+        <div class="space-y-3">
+          <div class="bg-rose-50 p-3 rounded-lg">
+            <p class="text-sm"><b>${esc(s.nama)}</b> · ${esc(s.jenjang)}/${esc(s.kelas||'-')}</p>
+            <p class="text-xs text-gray-600">NIS ${esc(s.nis||'-')} · NISN ${esc(s.nisn||'-')} · TA ${esc(s.tahun_ajaran||taLabel())}</p>
+            <div class="mt-2 text-sm">
+              <div class="flex justify-between"><span>Tunggakan Berjalan</span><b>${fmtIDR(c.tBerjalan)}</b></div>
+              <div class="flex justify-between"><span>Tunggakan Tahun Lalu</span><b>${fmtIDR(c.tLalu)}</b></div>
+              <div class="flex justify-between text-rose-700 font-bold border-t border-rose-200 mt-1 pt-1"><span>Total</span><span>${fmtIDR(c.total)}</span></div>
+            </div>
+          </div>
+          <p class="text-xs font-bold text-gray-700 uppercase">Riwayat Pembayaran SPP</p>
+          <div class="max-h-44 overflow-y-auto border rounded-lg divide-y">
+            ${riw.length ? riw.map(t=>`<div class="p-2 text-xs flex justify-between"><span>${fmtDate(t.tanggal)} · ${esc((Array.isArray(t.bulan)?t.bulan.join(', '):t.bulan)||t.keterangan)}</span><b class="text-emerald-700">${fmtIDR(t.nominal)}</b></div>`).join('') : '<p class="p-2 text-xs text-gray-400 text-center">Belum ada pembayaran.</p>'}
+          </div>
+          <div class="flex gap-2">
+            <button onclick="closeModal(); navigate('spp'); setTimeout(()=>window.__sppP('${s.id}'),200)" class="flex-1 bg-utama text-white font-bold rounded-lg py-2.5"><i class="fas fa-hand-holding-dollar mr-1"></i>Bayar</button>
+            <button onclick="window.__tWA('${s.id}')" class="flex-1 bg-[#25D366] text-white font-bold rounded-lg py-2.5"><i class="fab fa-whatsapp mr-1"></i>Kirim WA</button>
+          </div>
+        </div>`));
+    };
+    window.__tWA=(id)=>{ const s=state.siswa.find(x=>x.id===id); const c=hitungTunggakan(s,{ta:$('#tgTA').value||taLabel(), sampaiBulan:$('#tgBln').value||null});
+      const wa = normalizeWA(s.no_wa||''); if(!wa){ toast('Nomor WA wali belum diisi.','warn'); return; }
+      const tBelum = c.bulanWajib.filter(b=>!bulanTerbayar(s.id).has(b));
+      const rincian = (tBelum.length?'Bulan belum bayar: '+tBelum.join(', '):'-')+(c.tLalu>0?'. Tunggakan tahun lalu: '+fmtIDR(c.tLalu):'');
+      const tmpl = state.settings.waTemplate || '';
+      const msg = tmpl
+        .replaceAll('{NAMA}',s.nama).replaceAll('{JENJANG}',s.jenjang).replaceAll('{KELAS}',s.kelas||'-')
+        .replaceAll('{TA}', s.tahun_ajaran||taLabel())
+        .replaceAll('{TOTAL}',fmtIDR(c.total))
+        .replaceAll('{RINCIAN}',rincian)
+        .replaceAll('{SEKOLAH}', sek());
+      const sender = normalizeWA(state.settings.waSenderNumber||'');
+      const target = wa; // pesan dikirim ke wali
+      // Jika ada sender, sarankan klik tetap pakai wa.me ke target (sender bukan parameter wa.me, hanya catatan UX)
+      window.open('https://wa.me/'+target+'?text='+encodeURIComponent(msg),'_blank');
+    };
+    window.__tWAAll=async ()=>{
+      const items=state.siswa.filter(s=>(s.status||'aktif')==='aktif')
+        .map(s=>({s,c:hitungTunggakan(s,{ta:$('#tgTA').value||taLabel(), sampaiBulan:$('#tgBln').value||null})}))
+        .filter(x=>x.c.total>0 && normalizeWA(x.s.no_wa||''));
+      if(!items.length){ toast('Tidak ada siswa menunggak dengan no WA.','warn'); return; }
+      if(!confirm('Akan membuka '+items.length+' tab WhatsApp (delay 2 detik antar tab) supaya tidak diblok. Lanjut?')) return;
+      for(let i=0;i<items.length;i++){ const {s}=items[i]; window.__tWA(s.id); if(i<items.length-1) await new Promise(r=>setTimeout(r,2000)); }
+      toast('Selesai. Kirim manual tiap tab.','info');
+    };
+  }
+});
+
+/* ====== SETOR ====== */
+registerPage('setor',{title:'Setor ke Bendahara',bgClass:'bg-white',
+  render(){ const u=sess();
+    if(u.role==='admin'){
+      const gurus=state.users.filter(x=>x.role==='guru');
+      const rows=gurus.map(g=>{ const sal=saldoUserDiTangan(g.id); const tot=state.transaksi.filter(t=>t.tipe==='setor'&&t.input_user_id===g.id).reduce((s,t)=>s+Number(t.nominal||0),0); return {g,sal,tot}; });
+      const totT=rows.reduce((s,r)=>s+r.sal,0);
+      return `<div class="max-w-3xl mx-auto">
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3 text-sm" data-testid="setor-admin-info">
+          <p class="font-bold text-amber-800"><i class="fas fa-coins mr-1"></i>Total Dana Masih di Guru: ${fmtIDR(totT)}</p>
+        </div>
+        <div class="divide-y border rounded-xl bg-white">
+          ${rows.length?rows.map(r=>`<div class="p-3 flex items-center gap-3" data-testid="setor-guru-${r.g.id}">
+            <div class="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">${esc(r.g.nama[0]||'?')}</div>
+            <div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">${esc(r.g.nama)}</p><p class="text-[11px] text-gray-500">@${esc(r.g.username)} · Total disetor: ${fmtIDR(r.tot)}</p></div>
+            <div class="text-right"><p class="text-xs text-gray-500">Masih dipegang</p><p class="font-extrabold ${r.sal>0?'text-rose-700':'text-emerald-700'}">${fmtIDR(r.sal)}</p><span class="text-[10px] ${r.sal>0?'text-rose-700':'text-emerald-700'} font-bold">${r.sal>0?'BELUM SETOR':'LUNAS'}</span></div>
+          </div>`).join(''):'<p class="p-4 text-sm text-gray-400 text-center">Belum ada guru.</p>'}
+        </div>
+      </div>`;
+    }
+    const sal=saldoUserDiTangan(u.id);
+    return `<div class="max-w-md mx-auto">
+      <div class="bg-emerald-50 p-4 rounded-xl mb-4 text-center"><p class="text-xs text-emerald-700 uppercase font-bold">Saldo di Tangan Anda</p><p class="text-3xl font-extrabold text-emerald-700" data-testid="setor-saldo">${fmtIDR(sal)}</p></div>
+      <form onsubmit="window.__seS(event)" class="space-y-3" data-testid="setor-form">
+        <div><label class="text-xs font-semibold">Nominal (Rp)</label><input type="number" id="seN" required min="1" data-testid="setor-nominal" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-3"></div>
+        <div><label class="text-xs font-semibold">Metode</label><select id="seM" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-3"><option value="cash">💵 Cash</option><option value="transfer">🏦 Transfer</option></select></div>
+        <div><label class="text-xs font-semibold">Catatan</label><input id="seK" placeholder="Setoran SPP tanggal…" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-3"></div>
+        <button type="submit" data-testid="setor-submit" class="w-full bg-utama text-white font-bold py-3 rounded-lg shadow"><i class="fas fa-paper-plane mr-2"></i>Setor Sekarang</button>
+      </form>
+      <h4 class="font-bold text-gray-700 text-sm mt-6 mb-2">Riwayat Setoran</h4>
+      <div id="seL" class="divide-y border rounded-xl bg-white"></div>
+    </div>`;
+  },
+  mounted(){ const u=sess(); if(u.role==='admin') return;
+    window.__seR=()=>{ const list=state.transaksi.filter(t=>t.tipe==='setor'&&t.input_user_id===u.id).slice(0,15);
+      $('#seL').innerHTML = list.length?list.map(t=>`<div class="p-3 flex justify-between" data-testid="setor-row-${t.id}"><div><p class="text-sm font-semibold">${esc(t.keterangan||'Setoran')}</p><p class="text-[11px] text-gray-500">${fmtDate(t.tanggal)} · ${(t.metode||'cash')==='cash'?'💵':'🏦'}</p></div><p class="font-bold text-emerald-700">${fmtIDR(t.nominal)}</p></div>`).join(''):'<p class="p-3 text-sm text-gray-400 text-center">Belum ada setoran.</p>';
+    }; window.__seR();
+    window.__seS=(ev)=>{ ev.preventDefault();
+      const n=Number($('#seN').value||0), met=$('#seM').value, sal=saldoUserDiTangan(u.id);
+      if(n<=0){ toast('Nominal tidak valid.','warn'); return; }
+      if(n>sal){ toast('Nominal melebihi saldo Anda.','warn'); return; }
+      const adm=adminUser();
+      const t1={ id:uid(), tipe:'setor', tanggal:new Date().toISOString(), tahun_ajaran:taLabel(), metode:met, nominal:n, kategori:'Setor', keterangan:$('#seK').value.trim()||'Setor ke Bendahara', input_user_id:u.id, input_user_nama:u.nama, input_user_role:'guru', sumber:'transfer', created_at:new Date().toISOString() };
+      const t2={ ...t1, id:uid(), tipe:'kas_in', kategori:'Setoran Guru', keterangan:'Terima setoran dari '+u.nama, input_user_id:adm.id, input_user_nama:adm.nama, input_user_role:'admin', sumber:'bendahara', ref_setor_id:t1.id };
+      state.transaksi.unshift(t1,t2); saveState(); enqueue('transaksi','upsert',t1); enqueue('transaksi','upsert',t2);
+      toast('✅ Setoran tercatat.','success'); $('#seN').value=''; $('#seK').value='';
+      $('[data-testid="setor-saldo"]').textContent=fmtIDR(saldoUserDiTangan(u.id)); window.__seR();
+    };
+  }
+});
+
+/* ====== TRANSFER INTERNAL (admin) ====== */
+registerPage('transfer-internal',{title:'Tarik / Setor Dana Transfer',bgClass:'bg-white',adminOnly:true,
+  render(){ const c=saldoBendaharaCash(), tr=saldoBendaharaTransfer();
+    return `<div class="max-w-md mx-auto">
+      <div class="grid grid-cols-2 gap-2 mb-4">
+        <div class="bg-emerald-50 rounded-xl p-3 text-center"><p class="text-xs text-emerald-700 uppercase font-bold">💵 Cash</p><p class="font-extrabold text-emerald-700 text-lg">${fmtIDR(c)}</p></div>
+        <div class="bg-sky-50 rounded-xl p-3 text-center"><p class="text-xs text-sky-700 uppercase font-bold">🏦 Transfer</p><p class="font-extrabold text-sky-700 text-lg">${fmtIDR(tr)}</p></div>
+      </div>
+      <form onsubmit="window.__tiS(event)" class="space-y-3" data-testid="ti-form">
+        <div><label class="text-xs font-semibold">Arah</label><select id="tiA" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-3">
+          <option value="t2c">Tarik: Transfer → Cash</option>
+          <option value="c2t">Setor: Cash → Transfer</option>
+        </select></div>
+        <div><label class="text-xs font-semibold">Nominal (Rp)</label><input type="number" id="tiN" required min="1" data-testid="ti-nominal" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-3"></div>
+        <div><label class="text-xs font-semibold">Keterangan</label><input id="tiK" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-3"></div>
+        <button type="submit" data-testid="ti-submit" class="w-full bg-utama text-white font-bold py-3 rounded-lg shadow">Proses</button>
+      </form>
+    </div>`; },
+  mounted(){ window.__tiS=(ev)=>{ ev.preventDefault(); const a=$('#tiA').value, n=Number($('#tiN').value||0);
+    if(n<=0){ toast('Nominal tidak valid.','warn'); return; }
+    const cash=saldoBendaharaCash(), trf=saldoBendaharaTransfer();
+    const from = a==='t2c'?'transfer':'cash', to = a==='t2c'?'cash':'transfer';
+    if(from==='cash' && n>cash){ toast('Saldo cash kurang.','warn'); return; }
+    if(from==='transfer' && n>trf){ toast('Saldo transfer kurang.','warn'); return; }
+    const u=sess(); const tr={ id:uid(), tipe:'internal_move', tanggal:new Date().toISOString(), tahun_ajaran:taLabel(), nominal:n, keterangan:$('#tiK').value.trim()||(a==='t2c'?'Tarik dana transfer':'Setor dana transfer'), from_metode:from, to_metode:to, input_user_id:u.id, input_user_nama:u.nama, input_user_role:u.role, sumber:'bendahara', created_at:new Date().toISOString() };
+    state.transaksi.unshift(tr); saveState(); enqueue('transaksi','upsert',tr); toast('✅ Selesai.','success'); navigate('transfer-internal');
+  }; }
+});
+
+/* ====== PENGATURAN ====== */
+registerPage('pengaturan',{title:'Pengaturan',bgClass:'bg-white',
+  render(){ const adm=isAdmin();
+    return `<div class="max-w-2xl mx-auto space-y-4">
+      ${adm?`<section class="bg-gray-50 p-4 rounded-xl">
+        <h3 class="font-extrabold text-gelap mb-2"><i class="fas fa-image mr-1"></i>Logo & Identitas Sekolah</h3>
+        <div class="flex items-center gap-3 mb-2"><img id="lgPv" src="${esc(state.settings.logoDataURL||'')}" class="w-16 h-16 rounded-lg border bg-white object-contain" alt=""><div class="flex-1"><label class="block bg-utama text-white text-center text-sm font-bold py-2 rounded-lg cursor-pointer"><i class="fas fa-upload mr-1"></i>Pilih Logo<input type="file" accept="image/*" onchange="window.__pgLogo(this)" class="hidden" data-testid="pg-logo"></label>${state.settings.logoDataURL?'<button onclick="window.__pgLogoDel()" class="text-xs text-red-600 mt-1">Hapus logo</button>':''}</div></div>
+        <label class="text-xs font-semibold">Nama Sekolah/Yayasan</label><input id="pgNm" value="${esc(state.settings.namaSekolah||'')}" class="w-full border bg-white rounded p-2 mb-2" data-testid="pg-nama">
+        <label class="text-xs font-semibold">Alamat</label><input id="pgAlm" value="${esc(state.settings.alamatSekolah||'')}" class="w-full border bg-white rounded p-2">
+        <button onclick="window.__pgIdt()" data-testid="pg-save-identitas" class="mt-2 bg-utama text-white font-bold rounded-lg py-2 w-full">Simpan</button>
+      </section>
+
+      <section class="bg-gray-50 p-4 rounded-xl">
+        <h3 class="font-extrabold text-gelap mb-2"><i class="fas fa-cloud mr-1"></i>Sinkronisasi Spreadsheet</h3>
+        <label class="text-xs font-semibold">URL Google Apps Script</label>
+        <input id="pgGas" value="${esc(state.settings.gasUrl||'')}" class="w-full border bg-white rounded p-2 mb-2 text-xs font-mono" data-testid="pg-gas-url" placeholder="https://script.google.com/macros/s/.../exec">
+        <div class="flex gap-2"><button onclick="window.__pgGas()" data-testid="pg-save-gas" class="flex-1 bg-utama text-white font-bold rounded-lg py-2">Simpan & Tes</button><button onclick="manualSync()" class="bg-amber-500 text-white font-bold rounded-lg py-2 px-4"><i class="fas fa-rotate"></i></button></div>
+      </section>
+
+      <section class="bg-gray-50 p-4 rounded-xl">
+        <h3 class="font-extrabold text-gelap mb-2"><i class="fas fa-money-bill mr-1"></i>Tarif SPP & Tahun Ajaran</h3>
+        <div class="grid grid-cols-3 gap-2 mb-2">
+          <div><label class="text-xs font-semibold">TK</label><input id="pgTK" type="number" value="${state.settings.sppTK}" class="w-full border bg-white rounded p-2"></div>
+          <div><label class="text-xs font-semibold">SD</label><input id="pgSD" type="number" value="${state.settings.sppSD}" class="w-full border bg-white rounded p-2"></div>
+          <div><label class="text-xs font-semibold">SMP</label><input id="pgSMP" type="number" value="${state.settings.sppSMP}" class="w-full border bg-white rounded p-2"></div>
+        </div>
+        <label class="text-xs font-semibold">Tahun Ajaran Aktif</label>
+        <select id="pgTA" class="w-full border bg-white rounded p-2">${(state.settings.tahunAjaranList||[taLabel()]).map(t=>`<option ${t===state.settings.tahunAjaran?'selected':''}>${t}</option>`).join('')}</select>
+        <div class="flex gap-2 mt-2"><button onclick="window.__pgTarif()" data-testid="pg-save-tarif" class="flex-1 bg-utama text-white font-bold rounded-lg py-2">Simpan</button><button onclick="window.__pgTutupBuku()" data-testid="pg-tutup-buku" class="flex-1 bg-rose-600 text-white font-bold rounded-lg py-2"><i class="fas fa-book-open mr-1"></i>Tutup Buku & Buka TA Baru</button></div>
+      </section>
+
+      <section class="bg-gray-50 p-4 rounded-xl">
+        <h3 class="font-extrabold text-gelap mb-2"><i class="fab fa-whatsapp mr-1"></i>WhatsApp</h3>
+        <label class="text-xs font-semibold">No. WA Pengirim (untuk informasi - WA tetap dikirim dari device Anda)</label>
+        <input id="pgWASend" value="${esc(state.settings.waSenderNumber||'')}" placeholder="08xxxx..." class="w-full border bg-white rounded p-2 mb-2" data-testid="pg-wa-sender">
+        <label class="text-xs font-semibold">Template Pesan (variabel: {NAMA} {JENJANG} {KELAS} {TA} {TOTAL} {RINCIAN} {SEKOLAH})</label>
+        <textarea id="pgWATmpl" rows="6" class="w-full border bg-white rounded p-2 font-mono text-xs" data-testid="pg-wa-tmpl">${esc(state.settings.waTemplate||'')}</textarea>
+        <button onclick="window.__pgWASave()" class="mt-2 bg-utama text-white font-bold rounded-lg py-2 w-full">Simpan</button>
+      </section>`:''}
+
+      <section class="bg-gray-50 p-4 rounded-xl">
+        <h3 class="font-extrabold text-gelap mb-2"><i class="fas fa-lock mr-1"></i>Ganti Password</h3>
+        <input id="pwOld" type="password" placeholder="Password lama" class="w-full border bg-white rounded p-2 mb-2">
+        <input id="pwNew" type="password" placeholder="Password baru" class="w-full border bg-white rounded p-2 mb-2">
+        <button onclick="window.__pgPw()" class="bg-utama text-white font-bold rounded-lg py-2 w-full">Simpan</button>
+      </section>
+
+      <section class="bg-gray-50 p-4 rounded-xl">
+        <h3 class="font-extrabold text-gelap mb-2"><i class="fas fa-download mr-1"></i>Cadangan Lokal</h3>
+        <div class="flex gap-2"><button onclick="window.__pgExp()" class="flex-1 bg-sky-600 text-white font-bold rounded-lg py-2 text-sm"><i class="fas fa-file-export mr-1"></i>Ekspor JSON</button><label class="flex-1 bg-purple-600 text-white font-bold rounded-lg py-2 text-sm text-center cursor-pointer"><i class="fas fa-file-import mr-1"></i>Impor<input type="file" accept=".json" onchange="window.__pgImp(this)" class="hidden"></label></div>
+      </section>
+    </div>`; },
+  mounted(){
+    window.__pgLogo=(input)=>{ const f=input.files[0]; if(!f) return; if(f.size>700000){ toast('Logo terlalu besar (>700KB).','warn'); return; }
+      const r=new FileReader(); r.onload=(e)=>{ state.settings.logoDataURL=e.target.result; saveState(); enqueue('settings','upsert',state.settings); $('#lgPv').src=e.target.result; document.getElementById('headerLogo')&&(document.getElementById('headerLogo').src=e.target.result, document.getElementById('headerLogo').classList.remove('hidden')); toast('Logo tersimpan.'); }; r.readAsDataURL(f);
+    };
+    window.__pgLogoDel=()=>{ if(!confirm('Hapus logo?')) return; state.settings.logoDataURL=''; saveState(); enqueue('settings','upsert',state.settings); navigate('pengaturan'); };
+    window.__pgIdt=()=>{ state.settings.namaSekolah=$('#pgNm').value.trim(); state.settings.alamatSekolah=$('#pgAlm').value.trim(); saveState(); enqueue('settings','upsert',state.settings); toast('Tersimpan.'); };
+    window.__pgGas=async ()=>{ const url=$('#pgGas').value.trim(); state.settings.gasUrl=url; saveState(); if(!url){ setSyncDot('idle'); return; }
+      toast('Menguji koneksi…','info');
+      try{ const r=await fetch(url+(url.includes('?')?'&':'?')+'action=ping'); const j=await r.json(); if(j&&j.ok){ toast('✅ Terhubung.','success'); setSyncDot('ok'); pullSpreadsheet(true).then(()=>navigate('pengaturan')); } else throw new Error(j.error||'Respons tidak valid'); }
+      catch(e){ toast('❌ '+e.message,'error'); setSyncDot('err'); }
+    };
+    window.__pgTarif=()=>{ state.settings.sppTK=+$('#pgTK').value||0; state.settings.sppSD=+$('#pgSD').value||0; state.settings.sppSMP=+$('#pgSMP').value||0; state.settings.tahunAjaran=$('#pgTA').value; saveState(); enqueue('settings','upsert',state.settings); $('#labelTA').textContent=state.settings.tahunAjaran; toast('Tersimpan.'); };
+    window.__pgTutupBuku=()=>{
+      const ny=parseInt(state.settings.tahunAjaran.split('/')[0],10)+1;
+      const newTA = ny+'/'+(ny+1);
+      if(!confirm('Tutup buku TA '+state.settings.tahunAjaran+' dan buka TA baru '+newTA+'? Siswa aktif tetap, status alumni akan dihapus jika sudah ada.')) return;
+      // mark current siswa as alumni for those whose tahun_ajaran old (kept aktif since same TA — admin handles per-student)
+      const list = state.settings.tahunAjaranList||[];
+      if(!list.includes(newTA)) list.push(newTA);
+      state.settings.tahunAjaranList = list;
+      state.settings.tahunAjaran = newTA;
+      saveState(); enqueue('settings','upsert',state.settings);
+      $('#labelTA').textContent=newTA;
+      toast('✅ Buku ditutup. TA aktif: '+newTA,'success');
+      navigate('pengaturan');
+    };
+    window.__pgWASave=()=>{ state.settings.waSenderNumber=$('#pgWASend').value.trim(); state.settings.waTemplate=$('#pgWATmpl').value; saveState(); enqueue('settings','upsert',state.settings); toast('Tersimpan.'); };
+    window.__pgPw=()=>{ const u=sess(); const rec=state.users.find(x=>x.id===u.id); if(!rec){ toast('User tidak ditemukan.','error'); return; }
+      if(rec.password!==$('#pwOld').value){ toast('Password lama salah.','error'); return; }
+      const nw=$('#pwNew').value; if(nw.length<4){ toast('Min 4 karakter.','warn'); return; }
+      rec.password=nw; saveState(); enqueue('users','upsert',rec); $('#pwOld').value=''; $('#pwNew').value=''; toast('Password diubah.','success');
+    };
+    window.__pgExp=()=>{ const b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='infaq_backup_'+new Date().toISOString().slice(0,10)+'.json'; a.click(); };
+    window.__pgImp=(input)=>{ const f=input.files[0]; if(!f) return; if(!confirm('Akan menimpa semua data lokal. Lanjut?')){ input.value=''; return; }
+      const r=new FileReader(); r.onload=(e)=>{ try{ const o=JSON.parse(e.target.result); Object.assign(state,o); saveState(); toast('Tersimpan. Reload…'); setTimeout(()=>location.reload(),600); }catch(err){ toast('File tidak valid.','error'); } }; r.readAsText(f);
+    };
+  }
+});
+
+/* ====== ADMIN: USER ====== */
+registerPage('admin-user',{title:'Kelola User / Guru',bgClass:'bg-white',adminOnly:true,
+  render(){ return `<div class="max-w-3xl mx-auto"><button onclick="window.__uF()" data-testid="user-add" class="mb-3 bg-utama text-white font-bold rounded-lg py-2.5 px-4"><i class="fas fa-plus mr-1"></i>Tambah User</button>
+    <div id="uL" class="divide-y border rounded-xl bg-white"></div></div>`; },
+  mounted(){
+    window.__uR=()=>{ $('#uL').innerHTML = state.users.map(u=>`<div class="p-3 flex items-center gap-3" data-testid="user-row-${u.id}">
+      <div class="w-9 h-9 rounded-full ${u.role==='admin'?'bg-purple-100 text-purple-700':'bg-emerald-100 text-emerald-700'} flex items-center justify-center font-bold">${esc(u.nama[0]||'?')}</div>
+      <div class="flex-1 min-w-0"><p class="text-sm font-semibold">${esc(u.nama)} <span class="text-[10px] bg-gray-100 px-1.5 rounded">${esc(u.role)}</span></p><p class="text-[11px] text-gray-500">@${esc(u.username)} ${u.no_wa?'· '+esc(u.no_wa):''}</p></div>
+      <button onclick="window.__uF('${u.id}')" data-testid="user-edit-${u.id}" class="text-blue-600 px-2"><i class="fas fa-pen"></i></button>
+      ${u.id !== (sess()?.id) ? `<button onclick="window.__uDel('${u.id}')" class="text-red-600 px-2"><i class="fas fa-trash"></i></button>` : ''}
+    </div>`).join('');
+    };
+    window.__uR();
+    window.__uF=(id)=>{ const u=id?state.users.find(x=>x.id===id):{id:'',username:'',password:'',nama:'',role:'guru',no_wa:'',aktif:true};
+      openModal(modalBox((id?'Edit':'Tambah')+' User',`
+        <form onsubmit="window.__uSave(event,'${id||''}')" class="space-y-3" data-testid="user-form">
+          <div><label class="text-xs font-semibold">Nama *</label><input id="uf_n" value="${esc(u.nama||'')}" required class="w-full border rounded p-2 bg-gray-50"></div>
+          <div><label class="text-xs font-semibold">Username *</label><input id="uf_u" value="${esc(u.username||'')}" required class="w-full border rounded p-2 bg-gray-50"></div>
+          <div><label class="text-xs font-semibold">Password ${id?'(kosongkan jika tidak diubah)':''}</label><input id="uf_p" type="text" value="${id?'':esc(u.password||'')}" ${id?'':'required'} class="w-full border rounded p-2 bg-gray-50"></div>
+          <div><label class="text-xs font-semibold">Role *</label><select id="uf_r" class="w-full border rounded p-2 bg-gray-50"><option value="guru" ${u.role==='guru'?'selected':''}>Guru</option><option value="admin" ${u.role==='admin'?'selected':''}>Bendahara Pusat</option></select></div>
+          <div><label class="text-xs font-semibold">No WA</label><input id="uf_wa" value="${esc(u.no_wa||'')}" class="w-full border rounded p-2 bg-gray-50"></div>
+          <div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 border rounded-lg p-2.5 font-semibold">Batal</button><button type="submit" data-testid="user-save" class="flex-1 bg-utama text-white rounded-lg p-2.5 font-semibold">Simpan</button></div>
+        </form>`));
+    };
+    window.__uSave=(e,id)=>{ e.preventDefault();
+      const d={ id:id||uid(), nama:$('#uf_n').value.trim(), username:$('#uf_u').value.trim(), role:$('#uf_r').value, no_wa:$('#uf_wa').value.trim(), aktif:true };
+      const pw=$('#uf_p').value;
+      if(id){ const i=state.users.findIndex(x=>x.id===id); if(i>=0) state.users[i]={...state.users[i], ...d, password: pw||state.users[i].password}; }
+      else { d.password=pw; d.created_at=new Date().toISOString(); state.users.unshift(d); }
+      saveState(); enqueue('users','upsert',state.users.find(x=>x.id===(id||d.id))); closeModal(); window.__uR(); toast('Tersimpan.');
+    };
+    window.__uDel=(id)=>{ if(!confirm('Hapus user ini?')) return; state.users=state.users.filter(u=>u.id!==id); saveState(); enqueue('users','delete',{id}); window.__uR(); toast('Dihapus.','info'); };
+  }
+});
+
+/* ====== ADMIN: KATEGORI ====== */
+registerPage('admin-kategori',{title:'Kategori Kas',bgClass:'bg-white',adminOnly:true,
+  render(){ return `<div class="max-w-2xl mx-auto">
+    <div class="flex gap-2 mb-3"><input id="kN" placeholder="Nama kategori…" class="flex-1 border bg-gray-50 rounded-lg p-3" data-testid="kat-nama"><select id="kT" class="border bg-gray-50 rounded-lg p-3"><option value="in">Masuk</option><option value="out">Keluar</option></select><button onclick="window.__kSa()" data-testid="kat-add" class="bg-utama text-white font-bold rounded-lg px-4">Tambah</button></div>
+    <div id="kL" class="divide-y border rounded-xl"></div></div>`; },
+  mounted(){ window.__kR=()=>{ $('#kL').innerHTML=state.kategori.map(k=>`<div class="p-3 flex justify-between items-center" data-testid="kat-row-${k.id}"><p class="text-sm"><b>${esc(k.nama)}</b> <span class="text-[10px] bg-gray-100 px-1.5 rounded">${k.tipe==='in'?'Masuk':'Keluar'}</span></p><button onclick="window.__kD('${k.id}')" class="text-red-600"><i class="fas fa-trash"></i></button></div>`).join(''); };
+    window.__kSa=()=>{ const n=$('#kN').value.trim(); if(!n) return; const k={id:uid(),nama:n,tipe:$('#kT').value,created_at:new Date().toISOString()}; state.kategori.push(k); saveState(); enqueue('kategori','upsert',k); $('#kN').value=''; window.__kR(); };
+    window.__kD=(id)=>{ if(!confirm('Hapus?')) return; state.kategori=state.kategori.filter(k=>k.id!==id); saveState(); enqueue('kategori','delete',{id}); window.__kR(); };
+    window.__kR();
+  }
+});
+
+/* ====== ADMIN: TUNGGAKAN LALU ====== */
+registerPage('admin-tunggakan-lalu',{title:'Tunggakan Tahun Lalu',bgClass:'bg-white',adminOnly:true,
+  render(){ return `<div class="max-w-3xl mx-auto">
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-xs text-amber-800"><i class="fas fa-info-circle mr-1"></i>Tunggakan akan otomatis tergabung dengan siswa aktif jika <b>NIS/NISN/Nama</b> sama.</div>
+    <form onsubmit="window.__tlAdd(event)" class="space-y-2 mb-4" data-testid="tl-form">
+      <div class="grid grid-cols-2 gap-2"><input id="tl_nis" placeholder="NIS" class="border bg-gray-50 rounded p-2"><input id="tl_nisn" placeholder="NISN" class="border bg-gray-50 rounded p-2"></div>
+      <input id="tl_nama" required placeholder="Nama Siswa *" class="w-full border bg-gray-50 rounded p-2" data-testid="tl-nama">
+      <div class="grid grid-cols-2 gap-2">
+        <input id="tl_jumlah" type="number" required placeholder="Jumlah (Rp)" class="border bg-gray-50 rounded p-2" data-testid="tl-jumlah">
+        <input id="tl_taref" value="${(parseInt(taLabel().split('/')[0],10)-1)+'/'+parseInt(taLabel().split('/')[0],10)}" placeholder="TA Referensi" class="border bg-gray-50 rounded p-2">
+      </div>
+      <button class="w-full bg-utama text-white font-bold py-2 rounded-lg" data-testid="tl-add">Tambah</button>
+    </form>
+    <h3 class="font-bold text-gray-700 text-sm mb-2">Impor Massal (CSV)</h3>
+    <p class="text-[11px] text-gray-500 mb-2">Format: <code>nama,nis,nisn,jumlah,TA_referensi</code></p>
+    <textarea id="tl_bulk" rows="4" class="w-full border bg-gray-50 rounded p-2 font-mono text-xs" data-testid="tl-bulk"></textarea>
+    <button onclick="window.__tlBulk()" data-testid="tl-import" class="w-full bg-sky-600 text-white font-bold py-2 rounded-lg mt-2">Impor</button>
+    <h3 class="font-bold text-gray-700 text-sm mt-4 mb-2">Data Tunggakan Lalu</h3>
+    <div id="tlL" class="divide-y border rounded-xl max-h-96 overflow-y-auto bg-white"></div>
+  </div>`; },
+  mounted(){
+    window.__tlR=()=>{ $('#tlL').innerHTML = state.tunggakanLalu.length ? state.tunggakanLalu.map(t=>`<div class="p-3 flex justify-between items-center" data-testid="tl-row-${t.id}"><div><p class="text-sm font-semibold">${esc(t.nama)}</p><p class="text-[11px] text-gray-500">NIS ${esc(t.nis||'-')} · NISN ${esc(t.nisn||'-')} · TA ${esc(t.tahun_ajaran_referensi||'-')}</p></div><div class="flex items-center gap-2"><p class="font-bold text-rose-700">${fmtIDR(t.jumlah)}</p><button onclick="window.__tlD('${t.id}')" class="text-red-600"><i class="fas fa-trash"></i></button></div></div>`).join('') : '<p class="p-3 text-sm text-gray-400 text-center">Belum ada data.</p>'; };
+    window.__tlAdd=(e)=>{ e.preventDefault(); const d={id:uid(),nis:$('#tl_nis').value.trim(),nisn:$('#tl_nisn').value.trim(),nama:$('#tl_nama').value.trim(),jumlah:+$('#tl_jumlah').value||0,tahun_ajaran_referensi:$('#tl_taref').value.trim(),created_at:new Date().toISOString()};
+      if(!d.nama||d.jumlah<=0){ toast('Lengkapi data.','warn'); return; }
+      state.tunggakanLalu.unshift(d); saveState(); enqueue('tunggakanLalu','upsert',d); window.__tlR(); $('#tl_nis').value=$('#tl_nisn').value=$('#tl_nama').value=$('#tl_jumlah').value=''; toast('Tersimpan.');
+    };
+    window.__tlBulk=()=>{ const r=$('#tl_bulk').value.trim(); if(!r) return; let ok=0;
+      r.split(/\r?\n/).filter(Boolean).forEach(l=>{ if(l.toLowerCase().startsWith('nama,')) return; const p=l.split(/[,;	]/).map(x=>x.trim()); const [nm,ni,nn,jm,ta]=p; if(nm&&+jm>0){ const o={id:uid(),nama:nm,nis:ni||'',nisn:nn||'',jumlah:+jm,tahun_ajaran_referensi:ta||'',created_at:new Date().toISOString()}; state.tunggakanLalu.unshift(o); enqueue('tunggakanLalu','upsert',o); ok++; } });
+      saveState(); $('#tl_bulk').value=''; window.__tlR(); toast('✅ '+ok+' terimport.');
+    };
+    window.__tlD=(id)=>{ if(!confirm('Hapus?')) return; state.tunggakanLalu=state.tunggakanLalu.filter(t=>t.id!==id); saveState(); enqueue('tunggakanLalu','delete',{id}); window.__tlR(); };
+    window.__tlR();
+  }
+});
+
+/* ====== ADMIN: BUKU HUTANG ====== */
+registerPage('admin-buku-hutang',{title:'Buku Hutang',bgClass:'bg-white',adminOnly:true,
+  render(){ const h=rekapHutang();
+    return `<div class="max-w-3xl mx-auto">
+      <div class="bg-amber-50 p-3 rounded-xl mb-3 text-xs text-amber-800"><i class="fas fa-info-circle mr-1"></i>Transaksi <b>Kas Keluar</b> dengan kategori <b>"Hutang Operasional"</b> otomatis menambah hutang. Pembayaran via <b>Kas Masuk → Hutang Operasional</b>.</div>
+      <form onsubmit="window.__hAdd(event)" class="space-y-2 mb-4" data-testid="hutang-form">
+        <input id="hK" required placeholder="Keterangan hutang manual *" class="w-full border bg-gray-50 rounded p-2">
+        <div class="grid grid-cols-2 gap-2">
+          <input id="hP" type="number" placeholder="Pinjam (Rp)" class="border bg-gray-50 rounded p-2">
+          <input id="hB" type="number" placeholder="Bayar (Rp)" class="border bg-gray-50 rounded p-2">
+        </div>
+        <button class="w-full bg-utama text-white font-bold py-2 rounded-lg">Tambah</button>
+      </form>
+      <div class="divide-y border rounded-xl bg-white max-h-[55vh] overflow-y-auto" id="hL"></div>
+      <div class="grid grid-cols-3 gap-2 mt-4">
+        <div class="bg-rose-50 p-3 rounded-xl text-center"><p class="text-[10px] text-rose-700 font-bold uppercase">Total Pinjam</p><p class="text-base font-extrabold text-rose-700">${fmtIDR(h.totPinjam)}</p></div>
+        <div class="bg-emerald-50 p-3 rounded-xl text-center"><p class="text-[10px] text-emerald-700 font-bold uppercase">Total Bayar</p><p class="text-base font-extrabold text-emerald-700">${fmtIDR(h.totBayar)}</p></div>
+        <div class="bg-amber-50 p-3 rounded-xl text-center"><p class="text-[10px] text-amber-700 font-bold uppercase">Sisa Hutang</p><p class="text-base font-extrabold text-amber-700" data-testid="hutang-total">${fmtIDR(h.sisa)}</p></div>
+      </div>
+    </div>`; },
+  mounted(){
+    window.__hR=()=>{ const h=rekapHutang(); $('#hL').innerHTML = h.entries.length? h.entries.map(e=>`
+      <div class="p-3 grid grid-cols-3 gap-2 items-center" data-testid="hutang-row-${e.id}">
+        <div class="col-span-2 min-w-0"><p class="text-sm font-semibold truncate">${esc(e.keterangan||'-')} ${e.source==='kas'?'<span class="text-[10px] bg-sky-100 text-sky-700 px-1.5 rounded">dari Kas</span>':''}</p><p class="text-[11px] text-gray-500">${fmtDate(e.tanggal||e.created_at)} · ${esc(e.input_user_nama||'-')}</p></div>
+        <div class="text-right">
+          <p class="text-[11px] text-rose-700">Pinjam: ${fmtIDR(e.jumlah_pinjam||0)}</p>
+          <p class="text-[11px] text-emerald-700">Bayar: ${fmtIDR(e.jumlah_bayar||0)}</p>
+          ${e.source!=='kas'?`<button onclick="window.__hD('${e.id}')" class="text-red-600 text-xs"><i class="fas fa-trash"></i></button>`:''}
+        </div>
+      </div>`).join('') : '<p class="p-3 text-sm text-gray-400 text-center">Belum ada catatan.</p>';
+    };
+    window.__hAdd=(e)=>{ e.preventDefault(); const u=sess(); const h={id:uid(),tanggal:new Date().toISOString(),keterangan:$('#hK').value.trim(),jumlah_pinjam:+$('#hP').value||0,jumlah_bayar:+$('#hB').value||0,sisa:0,input_user_nama:u.nama,created_at:new Date().toISOString(),source:'manual'}; h.sisa=h.jumlah_pinjam-h.jumlah_bayar; state.bukuHutang.unshift(h); saveState(); enqueue('bukuHutang','upsert',h); $('#hK').value=$('#hP').value=$('#hB').value=''; navigate('admin-buku-hutang'); };
+    window.__hD=(id)=>{ if(!confirm('Hapus?')) return; state.bukuHutang=state.bukuHutang.filter(h=>h.id!==id); saveState(); enqueue('bukuHutang','delete',{id}); navigate('admin-buku-hutang'); };
+    window.__hR();
+  }
+});
+
+/* ====== ADMIN: REKAP KAS GURU ====== */
+registerPage('admin-rekap-guru',{title:'Saldo Per Guru',bgClass:'bg-white',adminOnly:true,
+  render(){ const gs=state.users.filter(u=>u.role==='guru'); const data=gs.map(g=>{
+      const masuk=state.transaksi.filter(t=>t.input_user_id===g.id && (t.tipe==='kas_in'||t.tipe==='spp_in')).reduce((s,t)=>s+(+t.nominal||0),0);
+      const keluar=state.transaksi.filter(t=>t.input_user_id===g.id && t.tipe==='kas_out').reduce((s,t)=>s+(+t.nominal||0),0);
+      const setor=state.transaksi.filter(t=>t.input_user_id===g.id && t.tipe==='setor').reduce((s,t)=>s+(+t.nominal||0),0);
+      return { g, masuk, keluar, setor, saldo: masuk-keluar-setor };
+    });
+    return `<div class="max-w-3xl mx-auto"><div class="divide-y border rounded-xl bg-white">${data.length?data.map(r=>`<div class="p-4" data-testid="rekap-guru-row-${r.g.id}"><p class="font-semibold">${esc(r.g.nama)} <span class="text-[10px] text-gray-500">@${esc(r.g.username)}</span></p><div class="grid grid-cols-4 gap-2 mt-2 text-xs">
+      <div class="bg-emerald-50 p-2 rounded text-center"><p class="text-emerald-700 font-bold uppercase text-[10px]">Masuk</p><p class="text-emerald-700 font-bold">${fmtIDR(r.masuk)}</p></div>
+      <div class="bg-rose-50 p-2 rounded text-center"><p class="text-rose-700 font-bold uppercase text-[10px]">Keluar</p><p class="text-rose-700 font-bold">${fmtIDR(r.keluar)}</p></div>
+      <div class="bg-sky-50 p-2 rounded text-center"><p class="text-sky-700 font-bold uppercase text-[10px]">Disetor</p><p class="text-sky-700 font-bold">${fmtIDR(r.setor)}</p></div>
+      <div class="bg-amber-50 p-2 rounded text-center"><p class="text-amber-700 font-bold uppercase text-[10px]">Sisa</p><p class="text-amber-700 font-bold">${fmtIDR(r.saldo)}</p></div>
+    </div></div>`).join(''):'<p class="p-3 text-sm text-gray-400 text-center">Belum ada guru.</p>'}</div></div>`;
+  }
+});
+
+/* ====== ADMIN: LAPORAN BULANAN ====== */
+registerPage('admin-laporan',{title:'Laporan Keuangan Bulanan',bgClass:'bg-white',adminOnly:true,
+  render(){ const now=new Date();
+    return `<div class="max-w-2xl mx-auto">
+      <div class="bg-emerald-50 p-4 rounded-xl mb-4">
+        <h3 class="font-extrabold text-gelap mb-2">Cetak Laporan</h3>
+        <div class="grid grid-cols-3 gap-2">
+          <select id="lB" class="border bg-white rounded p-2.5">${BULAN_FULL.map((b,i)=>`<option value="${i}" ${i===now.getMonth()?'selected':''}>${b}</option>`).join('')}</select>
+          <select id="lY" class="border bg-white rounded p-2.5">${[now.getFullYear()-1,now.getFullYear(),now.getFullYear()+1].map(y=>`<option ${y===now.getFullYear()?'selected':''}>${y}</option>`).join('')}</select>
+          <select id="lT" class="border bg-white rounded p-2.5">${(state.settings.tahunAjaranList||[taLabel()]).map(t=>`<option ${t===taLabel()?'selected':''}>${t}</option>`).join('')}</select>
+        </div>
+        <button onclick="window.__lapGo()" data-testid="lap-preview" class="w-full bg-utama text-white font-bold rounded-lg p-2.5 mt-2"><i class="fas fa-file-pdf mr-1"></i>Unduh PDF</button>
+      </div>
+    </div>`; },
+  mounted(){ window.__lapGo=()=>{ const m=$('#lB').value,y=$('#lY').value,t=$('#lT').value; const list=state.transaksi.filter(tr=>{ const d=new Date(tr.tanggal); return d.getMonth()===+m && d.getFullYear()===+y && (tr.tahun_ajaran||taLabel())===t; }); generatePDF(list,m,y,t); }; }
+});
+
+
+/* ====== ADMIN: JURNAL HARIAN SISWA (SPP) ====== */
+registerPage('admin-jurnal-siswa',{title:'Jurnal Harian Pembayaran Siswa',bgClass:'bg-white',adminOnly:true,
+  render(){
+    return `<div class="max-w-6xl mx-auto">
+      <div id="jsCards" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4"></div>
+      <div class="bg-gray-50 border rounded-xl p-3 mb-3 flex flex-wrap gap-2 items-end">
+        <div>
+          <label class="block text-[11px] font-semibold text-gray-600 mb-1">Periode</label>
+          <select id="jsMode" class="border bg-white rounded-lg p-2 text-sm">
+            <option value="harian">Harian</option>
+            <option value="bulanan">Bulanan</option>
+            <option value="semua">Semua</option>
+          </select>
+        </div>
+        <div id="jsDateWrap">
+          <label class="block text-[11px] font-semibold text-gray-600 mb-1">Tanggal</label>
+          <input id="jsDate" type="date" class="border bg-white rounded-lg p-2 text-sm">
+        </div>
+        <div id="jsMonthWrap" class="hidden">
+          <label class="block text-[11px] font-semibold text-gray-600 mb-1">Bulan</label>
+          <input id="jsMonth" type="month" class="border bg-white rounded-lg p-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-gray-600 mb-1">Metode</label>
+          <select id="jsMet" class="border bg-white rounded-lg p-2 text-sm">
+            <option value="">Semua</option><option value="cash">Cash</option><option value="transfer">Transfer</option>
+          </select>
+        </div>
+        <div class="flex-1 min-w-[160px]">
+          <label class="block text-[11px] font-semibold text-gray-600 mb-1">Cari Nama / Kelas</label>
+          <input id="jsQ" placeholder="Cari…" class="w-full border bg-white rounded-lg p-2 text-sm">
+        </div>
+        <button onclick="window.__jsRefresh()" data-testid="js-refresh" class="bg-utama text-white font-bold rounded-lg px-4 py-2 text-sm"><i class="fas fa-rotate mr-1"></i>Terapkan</button>
+      </div>
+      <div class="overflow-x-auto border rounded-xl bg-white">
+        <table class="w-full text-sm" data-testid="js-table">
+          <thead class="bg-emerald-50 text-emerald-800 text-xs uppercase">
+            <tr><th class="p-2 text-left">No</th><th class="p-2 text-left">Tanggal / Waktu</th><th class="p-2 text-left">Nama Siswa</th><th class="p-2 text-left">Uraian Bayar</th><th class="p-2 text-left">Dibayarkan Ke</th><th class="p-2 text-right">Total Bayar</th><th class="p-2 text-center">Metode</th></tr>
+          </thead>
+          <tbody id="jsBody"></tbody>
+          <tfoot id="jsFoot" class="bg-gray-50 font-bold"></tfoot>
+        </table>
+      </div>
+    </div>`;
+  },
+  mounted(){
+    const today=new Date().toISOString().slice(0,10);
+    $('#jsDate').value=today;
+    $('#jsMonth').value=today.slice(0,7);
+    $('#jsMode').addEventListener('change',()=>{
+      const m=$('#jsMode').value;
+      $('#jsDateWrap').classList.toggle('hidden', m!=='harian');
+      $('#jsMonthWrap').classList.toggle('hidden', m!=='bulanan');
+      window.__jsRefresh();
+    });
+    ['jsDate','jsMonth','jsMet','jsQ'].forEach(id=>$('#'+id).addEventListener('input',()=>window.__jsRefresh()));
+
+    window.__jsRefresh=()=>{
+      const mode=$('#jsMode').value, met=$('#jsMet').value, q=$('#jsQ').value.trim().toLowerCase();
+      const dStr=$('#jsDate').value, mStr=$('#jsMonth').value;
+      const siswaById={}; state.siswa.forEach(s=>siswaById[s.id]=s);
+      const userById={}; state.users.forEach(u=>userById[u.id]=u);
+      const all=state.transaksi.filter(t=>t.tipe==='spp_in');
+      // cards (selalu hari ini & bulan ini, terlepas dari filter tabel)
+      const td=new Date(), tdIso=td.toISOString().slice(0,10), tdMo=tdIso.slice(0,7);
+      const sumOf=(arr,cond,key)=>arr.filter(cond).reduce((s,t)=>s+(+t.nominal||0),0);
+      const isToday=t=>(t.tanggal||'').slice(0,10)===tdIso;
+      const isMonth=t=>(t.tanggal||'').slice(0,7)===tdMo;
+      const tHari=sumOf(all,isToday);
+      const tHariC=sumOf(all,t=>isToday(t)&&(t.metode||'cash')==='cash');
+      const tHariT=sumOf(all,t=>isToday(t)&&(t.metode||'cash')==='transfer');
+      const tBln=sumOf(all,isMonth);
+      const tBlnC=sumOf(all,t=>isMonth(t)&&(t.metode||'cash')==='cash');
+      const tBlnT=sumOf(all,t=>isMonth(t)&&(t.metode||'cash')==='transfer');
+      const cntHari=all.filter(isToday).length;
+      const cntBln=all.filter(isMonth).length;
+      $('#jsCards').innerHTML=`
+        <div class="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl p-4 text-white shadow-lg">
+          <p class="text-[11px] uppercase text-emerald-100">Total Bayar Hari Ini</p>
+          <h2 class="text-2xl font-extrabold" data-testid="js-total-hari">${fmtIDR(tHari)}</h2>
+          <p class="text-[11px] text-emerald-100 mb-2">${cntHari} transaksi · ${fmtDate(td.toISOString())}</p>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-white/15 rounded p-1.5">💵 Cash<br><b>${fmtIDR(tHariC)}</b></div>
+            <div class="bg-white/15 rounded p-1.5">🏦 Transfer<br><b>${fmtIDR(tHariT)}</b></div>
+          </div>
+        </div>
+        <div class="bg-gradient-to-br from-sky-500 to-sky-700 rounded-2xl p-4 text-white shadow-lg">
+          <p class="text-[11px] uppercase text-sky-100">Total Bayar Bulan Ini</p>
+          <h2 class="text-2xl font-extrabold" data-testid="js-total-bulan">${fmtIDR(tBln)}</h2>
+          <p class="text-[11px] text-sky-100 mb-2">${cntBln} transaksi · ${tdMo}</p>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-white/15 rounded p-1.5">💵 Cash<br><b>${fmtIDR(tBlnC)}</b></div>
+            <div class="bg-white/15 rounded p-1.5">🏦 Transfer<br><b>${fmtIDR(tBlnT)}</b></div>
+          </div>
+        </div>`;
+      // table data
+      let rows=all.slice();
+      if(mode==='harian') rows=rows.filter(t=>(t.tanggal||'').slice(0,10)===dStr);
+      else if(mode==='bulanan') rows=rows.filter(t=>(t.tanggal||'').slice(0,7)===mStr);
+      if(met) rows=rows.filter(t=>(t.metode||'cash')===met);
+      if(q) rows=rows.filter(t=>{ const s=siswaById[t.siswa_id]; const nm=(s?.nama||t.siswa_nama||'').toLowerCase(); const kl=(s?(s.jenjang+' '+s.kelas):'').toLowerCase(); return nm.includes(q)||kl.includes(q); });
+      rows.sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
+      const body=$('#jsBody');
+      if(!rows.length){ body.innerHTML='<tr><td colspan="7" class="p-4 text-center text-gray-400">Tidak ada transaksi.</td></tr>'; $('#jsFoot').innerHTML=''; return; }
+      body.innerHTML=rows.map((t,i)=>{
+        const s=siswaById[t.siswa_id]||{};
+        const u=userById[t.input_user_id]||{nama:t.input_user_nama||'-'};
+        const bulan=Array.isArray(t.bulan)?t.bulan.join(', '):(t.bulan||'-');
+        const met=(t.metode||'cash')==='transfer'?'<span class="bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full text-[10px] font-bold">🏦 TRANSFER</span>':'<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px] font-bold">💵 CASH</span>';
+        return `<tr class="border-t hover:bg-emerald-50/40" data-testid="js-row-${t.id}">
+          <td class="p-2 text-gray-500">${i+1}</td>
+          <td class="p-2 whitespace-nowrap">${fmtDateTime(t.tanggal)}</td>
+          <td class="p-2"><p class="font-semibold">${esc(s.nama||t.siswa_nama||'-')}</p><p class="text-[11px] text-gray-500">${esc((s.jenjang||'')+' '+(s.kelas||''))}</p></td>
+          <td class="p-2 text-xs">SPP ${esc(bulan)}${t.keterangan?'<br><span class="text-gray-500">'+esc(t.keterangan)+'</span>':''}</td>
+          <td class="p-2 text-xs">${esc(u.nama||'-')}<br><span class="text-[10px] text-gray-500">${esc(t.input_user_role||'')}</span></td>
+          <td class="p-2 text-right font-bold text-emerald-700">${fmtIDR(t.nominal)}</td>
+          <td class="p-2 text-center">${met}</td>
+        </tr>`;
+      }).join('');
+      const tot=rows.reduce((s,t)=>s+(+t.nominal||0),0);
+      const totC=rows.filter(t=>(t.metode||'cash')==='cash').reduce((s,t)=>s+(+t.nominal||0),0);
+      const totT=rows.filter(t=>(t.metode||'cash')==='transfer').reduce((s,t)=>s+(+t.nominal||0),0);
+      $('#jsFoot').innerHTML=`<tr><td colspan="5" class="p-2 text-right">Total (${rows.length} trx) — 💵 ${fmtIDR(totC)} · 🏦 ${fmtIDR(totT)}</td><td class="p-2 text-right text-emerald-700" data-testid="js-grand">${fmtIDR(tot)}</td><td></td></tr>`;
+    };
+    window.__jsRefresh();
+  }
+});
+
+/* ====== ADMIN: BUKU KAS HARIAN ====== */
+registerPage('admin-jurnal-kas',{title:'Buku Kas Harian (Masuk/Keluar)',bgClass:'bg-white',adminOnly:true,
+  render(){
+    return `<div class="max-w-6xl mx-auto">
+      <div id="jkCards" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4"></div>
+      <div class="bg-gray-50 border rounded-xl p-3 mb-3 flex flex-wrap gap-2 items-end">
+        <div>
+          <label class="block text-[11px] font-semibold text-gray-600 mb-1">Periode</label>
+          <select id="jkMode" class="border bg-white rounded-lg p-2 text-sm">
+            <option value="harian">Harian</option><option value="bulanan">Bulanan</option><option value="semua">Semua</option>
+          </select>
+        </div>
+        <div id="jkDateWrap"><label class="block text-[11px] font-semibold text-gray-600 mb-1">Tanggal</label><input id="jkDate" type="date" class="border bg-white rounded-lg p-2 text-sm"></div>
+        <div id="jkMonthWrap" class="hidden"><label class="block text-[11px] font-semibold text-gray-600 mb-1">Bulan</label><input id="jkMonth" type="month" class="border bg-white rounded-lg p-2 text-sm"></div>
+        <div><label class="block text-[11px] font-semibold text-gray-600 mb-1">Jenis</label>
+          <select id="jkType" class="border bg-white rounded-lg p-2 text-sm">
+            <option value="">Semua</option><option value="kas_in">Kas Masuk</option><option value="kas_out">Kas Keluar</option>
+          </select>
+        </div>
+        <div><label class="block text-[11px] font-semibold text-gray-600 mb-1">Metode</label>
+          <select id="jkMet" class="border bg-white rounded-lg p-2 text-sm">
+            <option value="">Semua</option><option value="cash">Cash</option><option value="transfer">Transfer</option>
+          </select>
+        </div>
+        <div class="flex-1 min-w-[160px]"><label class="block text-[11px] font-semibold text-gray-600 mb-1">Cari Kategori / Ket.</label><input id="jkQ" placeholder="Cari…" class="w-full border bg-white rounded-lg p-2 text-sm"></div>
+        <button onclick="window.__jkRefresh()" data-testid="jk-refresh" class="bg-utama text-white font-bold rounded-lg px-4 py-2 text-sm"><i class="fas fa-rotate mr-1"></i>Terapkan</button>
+      </div>
+      <div class="overflow-x-auto border rounded-xl bg-white">
+        <table class="w-full text-sm" data-testid="jk-table">
+          <thead class="bg-purple-50 text-purple-800 text-xs uppercase">
+            <tr><th class="p-2 text-left">No</th><th class="p-2 text-left">Tanggal / Waktu</th><th class="p-2 text-left">Jenis</th><th class="p-2 text-left">Kategori</th><th class="p-2 text-left">Keterangan</th><th class="p-2 text-left">Oleh</th><th class="p-2 text-right">Masuk</th><th class="p-2 text-right">Keluar</th><th class="p-2 text-center">Metode</th></tr>
+          </thead>
+          <tbody id="jkBody"></tbody>
+          <tfoot id="jkFoot" class="bg-gray-50 font-bold"></tfoot>
+        </table>
+      </div>
+    </div>`;
+  },
+  mounted(){
+    const today=new Date().toISOString().slice(0,10);
+    $('#jkDate').value=today; $('#jkMonth').value=today.slice(0,7);
+    $('#jkMode').addEventListener('change',()=>{ const m=$('#jkMode').value; $('#jkDateWrap').classList.toggle('hidden',m!=='harian'); $('#jkMonthWrap').classList.toggle('hidden',m!=='bulanan'); window.__jkRefresh(); });
+    ['jkDate','jkMonth','jkType','jkMet','jkQ'].forEach(id=>$('#'+id).addEventListener('input',()=>window.__jkRefresh()));
+
+    window.__jkRefresh=()=>{
+      const mode=$('#jkMode').value, typ=$('#jkType').value, met=$('#jkMet').value, q=$('#jkQ').value.trim().toLowerCase();
+      const dStr=$('#jkDate').value, mStr=$('#jkMonth').value;
+      const userById={}; state.users.forEach(u=>userById[u.id]=u);
+      const all=state.transaksi.filter(t=>t.tipe==='kas_in'||t.tipe==='kas_out');
+
+      const td=new Date(), tdIso=td.toISOString().slice(0,10), tdMo=tdIso.slice(0,7);
+      const sIn=(arr,cond)=>arr.filter(t=>cond(t)&&t.tipe==='kas_in').reduce((s,t)=>s+(+t.nominal||0),0);
+      const sOut=(arr,cond)=>arr.filter(t=>cond(t)&&t.tipe==='kas_out').reduce((s,t)=>s+(+t.nominal||0),0);
+      const isToday=t=>(t.tanggal||'').slice(0,10)===tdIso;
+      const isMonth=t=>(t.tanggal||'').slice(0,7)===tdMo;
+      const inH=sIn(all,isToday), outH=sOut(all,isToday), inM=sIn(all,isMonth), outM=sOut(all,isMonth);
+      $('#jkCards').innerHTML=`
+        <div class="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl p-4 text-white shadow-lg">
+          <p class="text-[11px] uppercase text-emerald-100">Hari Ini · ${fmtDate(td.toISOString())}</p>
+          <div class="grid grid-cols-3 gap-2 mt-1 text-xs">
+            <div class="bg-white/15 rounded p-2"><p class="text-emerald-100">Masuk</p><p class="font-extrabold text-base" data-testid="jk-in-hari">${fmtIDR(inH)}</p></div>
+            <div class="bg-white/15 rounded p-2"><p class="text-emerald-100">Keluar</p><p class="font-extrabold text-base" data-testid="jk-out-hari">${fmtIDR(outH)}</p></div>
+            <div class="bg-white/25 rounded p-2"><p class="text-emerald-50">Saldo</p><p class="font-extrabold text-base">${fmtIDR(inH-outH)}</p></div>
+          </div>
+        </div>
+        <div class="bg-gradient-to-br from-sky-500 to-sky-700 rounded-2xl p-4 text-white shadow-lg">
+          <p class="text-[11px] uppercase text-sky-100">Bulan Ini · ${tdMo}</p>
+          <div class="grid grid-cols-3 gap-2 mt-1 text-xs">
+            <div class="bg-white/15 rounded p-2"><p class="text-sky-100">Masuk</p><p class="font-extrabold text-base" data-testid="jk-in-bln">${fmtIDR(inM)}</p></div>
+            <div class="bg-white/15 rounded p-2"><p class="text-sky-100">Keluar</p><p class="font-extrabold text-base" data-testid="jk-out-bln">${fmtIDR(outM)}</p></div>
+            <div class="bg-white/25 rounded p-2"><p class="text-sky-50">Saldo</p><p class="font-extrabold text-base">${fmtIDR(inM-outM)}</p></div>
+          </div>
+        </div>`;
+
+      let rows=all.slice();
+      if(mode==='harian') rows=rows.filter(t=>(t.tanggal||'').slice(0,10)===dStr);
+      else if(mode==='bulanan') rows=rows.filter(t=>(t.tanggal||'').slice(0,7)===mStr);
+      if(typ) rows=rows.filter(t=>t.tipe===typ);
+      if(met) rows=rows.filter(t=>(t.metode||'cash')===met);
+      if(q) rows=rows.filter(t=>((t.kategori||'')+' '+(t.keterangan||'')).toLowerCase().includes(q));
+      rows.sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
+      const body=$('#jkBody');
+      if(!rows.length){ body.innerHTML='<tr><td colspan="9" class="p-4 text-center text-gray-400">Tidak ada transaksi.</td></tr>'; $('#jkFoot').innerHTML=''; return; }
+      body.innerHTML=rows.map((t,i)=>{
+        const u=userById[t.input_user_id]||{nama:t.input_user_nama||'-'};
+        const iIn=t.tipe==='kas_in';
+        const metB=(t.metode||'cash')==='transfer'?'<span class="bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full text-[10px] font-bold">🏦</span>':'<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px] font-bold">💵</span>';
+        return `<tr class="border-t hover:bg-purple-50/40" data-testid="jk-row-${t.id}">
+          <td class="p-2 text-gray-500">${i+1}</td>
+          <td class="p-2 whitespace-nowrap">${fmtDateTime(t.tanggal)}</td>
+          <td class="p-2"><span class="${iIn?'bg-emerald-100 text-emerald-700':'bg-rose-100 text-rose-700'} px-2 py-0.5 rounded-full text-[10px] font-bold">${iIn?'MASUK':'KELUAR'}</span></td>
+          <td class="p-2">${esc(t.kategori||'-')}</td>
+          <td class="p-2 text-xs">${esc(t.keterangan||'-')}</td>
+          <td class="p-2 text-xs">${esc(u.nama||'-')}</td>
+          <td class="p-2 text-right text-emerald-700 font-bold">${iIn?fmtIDR(t.nominal):'-'}</td>
+          <td class="p-2 text-right text-rose-700 font-bold">${iIn?'-':fmtIDR(t.nominal)}</td>
+          <td class="p-2 text-center">${metB}</td>
+        </tr>`;
+      }).join('');
+      const tIn=rows.filter(t=>t.tipe==='kas_in').reduce((s,t)=>s+(+t.nominal||0),0);
+      const tOut=rows.filter(t=>t.tipe==='kas_out').reduce((s,t)=>s+(+t.nominal||0),0);
+      $('#jkFoot').innerHTML=`<tr><td colspan="6" class="p-2 text-right">Total (${rows.length} trx) · Saldo Periode: <span class="text-gray-800">${fmtIDR(tIn-tOut)}</span></td><td class="p-2 text-right text-emerald-700" data-testid="jk-grand-in">${fmtIDR(tIn)}</td><td class="p-2 text-right text-rose-700" data-testid="jk-grand-out">${fmtIDR(tOut)}</td><td></td></tr>`;
+    };
+    window.__jkRefresh();
+  }
+});
+
+/* ====== LOG SYNC ====== */
+registerPage('log-sync',{title:'Log Sinkronisasi',bgClass:'bg-white',
+  render(){ return `<div class="max-w-3xl mx-auto">
+    <div class="grid grid-cols-2 gap-2 mb-3">
+      <div class="bg-emerald-50 p-3 rounded-xl text-center"><p class="text-[10px] text-emerald-700 font-bold uppercase">Berhasil</p><p class="text-xl font-extrabold text-emerald-700">${state.syncLog.filter(l=>l.status==='ok').length}</p></div>
+      <div class="bg-rose-50 p-3 rounded-xl text-center"><p class="text-[10px] text-rose-700 font-bold uppercase">Gagal</p><p class="text-xl font-extrabold text-rose-700">${state.syncLog.filter(l=>l.status==='err').length}</p></div>
+    </div>
+    <div class="flex gap-2 mb-3">
+      <button onclick="manualSync()" data-testid="log-resync" class="flex-1 bg-amber-500 text-white font-bold rounded-lg p-2"><i class="fas fa-rotate mr-1"></i>Sinkronkan</button>
+      <button onclick="pullSpreadsheet(false).then(()=>navigate('log-sync'))" class="flex-1 bg-sky-600 text-white font-bold rounded-lg p-2"><i class="fas fa-cloud-arrow-down mr-1"></i>Tarik Spreadsheet</button>
+      <button onclick="window.__panduan()" class="flex-1 bg-slate-700 text-white font-bold rounded-lg p-2"><i class="fas fa-book mr-1"></i>Panduan</button>
+    </div>
+    <div class="divide-y border rounded-xl bg-white max-h-[55vh] overflow-y-auto">
+      ${state.syncLog.length ? state.syncLog.map(l=>`<div class="p-3 flex items-start gap-3" data-testid="log-row-${l.id}">
+        <div class="w-7 h-7 rounded-full ${l.status==='ok'?'bg-emerald-100 text-emerald-700':'bg-rose-100 text-rose-700'} flex items-center justify-center text-sm"><i class="fas ${l.status==='ok'?'fa-check':'fa-xmark'}"></i></div>
+        <div class="flex-1 min-w-0"><p class="text-sm font-semibold">${esc(l.jenis)} · ${l.jumlah} record · ${esc(l.user)}</p><p class="text-[11px] text-gray-500">${fmtDateTime(l.tanggal)}</p><p class="text-[11px] ${l.status==='ok'?'text-emerald-700':'text-rose-700'}">${esc(l.keterangan||'-')}</p></div>
+      </div>`).join('') : '<p class="p-4 text-sm text-gray-400 text-center">Belum ada log.</p>'}
+    </div>
+  </div>`; },
+  mounted(){ window.__panduan=()=>{ openModal(modalBox('Panduan Hubungkan Spreadsheet',`
+    <ol class="text-sm space-y-2 list-decimal pl-5">
+      <li>Buka Spreadsheet kosong → Extensions → <b>Apps Script</b>.</li>
+      <li>Tempel seluruh isi file <code>Code.gs</code> dari repo.</li>
+      <li>Deploy → <b>New deployment → Web app</b>. Execute as: <b>Me</b>, Access: <b>Anyone</b>.</li>
+      <li>Salin URL Web App, tempel di <b>Pengaturan → URL Apps Script</b>.</li>
+      <li>Klik <b>Simpan & Tes</b>. Data otomatis sinkron — Anda juga dapat mengedit langsung di Spreadsheet (format tabel).</li>
+    </ol><button onclick="closeModal()" class="mt-4 w-full bg-utama text-white font-bold py-2 rounded-lg">Mengerti</button>`)); };
+  }
+});
+
+/* ====== RECEIPT ====== */
+registerPage('receipt',{title:'Bukti Pembayaran',bgClass:'bg-gray-100',
+  render(params){ const t=state.transaksi.find(x=>x.id===params.id); if(!t) return '<p class="p-4 text-center text-gray-500">Transaksi tidak ditemukan.</p>';
+    const s=state.siswa.find(x=>x.id===t.siswa_id)||{};
+    const blnTxt=(Array.isArray(t.bulan)?t.bulan.join(', '):(t.bulan||''))||t.keterangan||'-';
+    const no='TRX-'+new Date(t.tanggal).toISOString().slice(0,10).replace(/-/g,'')+'-'+t.id.slice(-5).toUpperCase();
+    const logo=state.settings.logoDataURL ? `<img class="r-logo" src="${state.settings.logoDataURL}" alt="">` : '';
+    return `<div class="max-w-md mx-auto">
+      <div class="bg-white shadow-2xl rounded-xl overflow-hidden">
+        <div id="receiptCanvas">
+          ${logo}
+          <div class="r-title">BUKTI PEMBAYARAN SPP</div>
+          <div class="r-sub" style="font-weight:700;margin-top:2px">${esc(sek())}</div>
+          <div class="r-sub">${esc(alm())}</div>
+          <hr>
+          <div class="row"><span>No. Resi</span><span><b>${no}</b></span></div>
+          <div class="row"><span>Tanggal</span><span>${fmtDate(t.tanggal)}</span></div>
+          <div class="row"><span>TA</span><span>${esc(t.tahun_ajaran||taLabel())}</span></div>
+          <div class="row"><span>Kasir</span><span>${esc(t.input_user_nama||'-')}</span></div>
+          <div class="row"><span>Metode</span><span><b>${(t.metode||'cash')==='cash'?'💵 CASH':'🏦 TRANSFER'}</b></span></div>
+          <hr>
+          <div class="row"><span>Nama</span><span><b>${esc(t.nama_siswa||s.nama||'-')}</b></span></div>
+          <div class="row"><span>NIS / NISN</span><span>${esc(t.nis||s.nis||'-')} / ${esc(t.nisn||s.nisn||'-')}</span></div>
+          <div class="row"><span>Jenjang</span><span><b>${esc(t.jenjang||s.jenjang||'-')}</b></span></div>
+          <div class="row"><span>Kelas</span><span>${esc(t.kelas||s.kelas||'-')}</span></div>
+          <hr>
+          <div class="row"><span>Untuk</span><span style="max-width:60%;text-align:right">${esc(blnTxt)}</span></div>
+          <div class="row total"><span>TOTAL BAYAR</span><span>${fmtIDR(t.nominal)}</span></div>
+          <hr>
+          <div class="r-sub" style="font-size:9.5px;line-height:1.4;margin-top:4px"><b>WAJIB MEMINTA STRUK INI. APABILA TIDAK DICETAK, BOLEH MELAKUKAN SCREENSHOT DAN MENGIRIMKANNYA MELALUI WHATSAPP.</b></div>
+          <div class="r-sub" style="margin-top:6px">Terima kasih atas pembayarannya.<br>Semoga ilmu putra/putri Bapak/Ibu berkah. 🤲</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 mt-4 no-print">
+        <button onclick="window.__rPr()" data-testid="resi-print" class="bg-slate-700 text-white font-bold py-3 rounded-lg"><i class="fas fa-print mr-1"></i>Cetak</button>
+        <button onclick="window.__rDl()" data-testid="resi-download" class="bg-sky-600 text-white font-bold py-3 rounded-lg"><i class="fas fa-image mr-1"></i>Simpan Gambar</button>
+        <button onclick="window.__rWA('${t.id}')" data-testid="resi-wa" class="col-span-2 bg-[#25D366] text-white font-bold py-3 rounded-lg"><i class="fab fa-whatsapp mr-1"></i>Kirim ke WhatsApp Wali</button>
+      </div>
+    </div>`; },
+  mounted(params){ const t=state.transaksi.find(x=>x.id===params.id); if(!t) return; const s=state.siswa.find(x=>x.id===t.siswa_id)||{};
+    window.__rPr=()=>window.print();
+    window.__rDl=async ()=>{ if(!window.html2canvas){ toast('Library belum siap.','warn'); return; } const c=await window.html2canvas($('#receiptCanvas'),{backgroundColor:'#fff',scale:2}); const a=document.createElement('a'); a.href=c.toDataURL('image/png'); a.download='Resi_'+(t.nama_siswa||'siswa')+'_'+new Date(t.tanggal).toISOString().slice(0,10)+'.png'; a.click(); toast('Disimpan.'); };
+    window.__rWA=async ()=>{ const wa=normalizeWA(s.no_wa||''); if(!wa){ toast('No WA wali belum diisi.','warn'); return; }
+      if(!window.html2canvas){ toast('Library belum siap.','warn'); return; }
+      const c=await window.html2canvas($('#receiptCanvas'),{backgroundColor:'#fff',scale:2}); const du=c.toDataURL('image/png');
+      try{ const blob=await (await fetch(du)).blob(); const file=new File([blob],'resi-'+t.id+'.png',{type:'image/png'});
+        if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:'Bukti Pembayaran SPP',text:'Bukti Pembayaran SPP a.n '+t.nama_siswa+'\nTotal: '+fmtIDR(t.nominal)}); return; }
+      }catch(e){}
+      const a=document.createElement('a'); a.href=du; a.download='Resi_'+(t.nama_siswa||'siswa')+'.png'; a.click();
+      const txt=`*Bukti Pembayaran SPP*%0A${encodeURIComponent(sek())}%0A%0AAtas nama: *${encodeURIComponent(t.nama_siswa||'')}*%0AJenjang/Kelas: ${encodeURIComponent((t.jenjang||'')+'/'+(t.kelas||'-'))}%0ATotal: *${encodeURIComponent(fmtIDR(t.nominal))}*%0AMetode: ${(t.metode||'cash')==='cash'?'CASH':'TRANSFER'}%0AUntuk: ${encodeURIComponent((Array.isArray(t.bulan)?t.bulan.join(', '):t.bulan)||t.keterangan||'-')}%0A%0AGambar bukti pembayaran tersimpan, mohon dilampirkan pada chat ini.%0A%0A_Terima kasih._`;
+      window.open('https://wa.me/'+wa+'?text='+txt,'_blank'); toast('Gambar diunduh — lampirkan di chat WA.','info');
+    };
+  }
+});
+
+})();</script>
+
+<script>
+/* Register service worker */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(e => console.warn('[SW] failed:', e));
+  });
+}
+
+/* PostHog */
+!(function(t,e){var o,n,p,r;e.__SV||((window.posthog=e),(e._i=[]),(e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&((t=t[o[0]]),(e=o[1])),(t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)));});}((p=t.createElement("script")).type="text/javascript"),(p.crossOrigin="anonymous"),(p.async=!0),(p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js"),(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?(u=e[a]=[]):(a="posthog"),u.people=u.people||[],u.toString=function(t){var e="posthog";return("posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e);},u.people.toString=function(){return u.toString(1)+".people (stub)";},o="init me ws ys ps bs capture je Di ks register register_once register_for_session unregister unregister_for_session Ps getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSurveysLoaded onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey canRenderSurveyAsync identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty Es $s createPersonProfile Is opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing Ss debug xs getPageViewId captureTraceFeedback captureTraceMetric".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a]);}),(e.__SV=1));})(document,window.posthog||[]);
+posthog.init("phc_xAvL2Iq4tFmANRE7kzbKwaSqp1HJjN7x48s3vr0CMjs",{api_host:"https://us.i.posthog.com",person_profiles:"identified_only",session_recording:{recordCrossOriginIframes:true,capturePerformance:false}});
+</script>
+</body>
+</html>
