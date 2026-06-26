@@ -8,8 +8,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Infaq Santri" />
-<link rel="manifest" href="/manifest.webmanifest" />
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%23064e3b'/><text x='96' y='130' font-size='110' text-anchor='middle' fill='%23fbbf24' font-family='Arial Black' font-weight='900'>I</text></svg>" />
+<link id="pwaManifest" rel="manifest" href="./manifest.webmanifest" />
+<link id="favIcon" rel="icon" type="image/png" href="https://iili.io/fFA80TF.md.png" />
+<link id="appleIcon" rel="apple-touch-icon" href="https://iili.io/fFA80TF.md.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -109,6 +110,7 @@ body{overflow:hidden;height:100vh}
   </div>
   <div class="flex items-center gap-2">
     <button onclick="manualSync()" data-testid="btn-sync" title="Sinkronkan" class="bg-aksen/20 hover:bg-aksen/30 text-aksen w-9 h-9 rounded-full flex items-center justify-center transition"><i class="fas fa-cloud-arrow-up text-sm"></i></button>
+    <button id="btnInstall" onclick="installPWA()" title="Pasang aplikasi" class="hidden bg-aksen text-gelap font-bold w-9 h-9 rounded-full items-center justify-center transition" data-testid="btn-install"><i class="fas fa-download text-sm"></i></button>
     <div class="text-right hidden sm:block">
       <p class="text-xs font-bold text-aksen" id="activeUserName">-</p>
       <p class="text-[10px] text-white/70" id="activeUserRole">-</p>
@@ -255,17 +257,20 @@ function setSyncDot(s){
   else t.textContent=state.settings.gasUrl?'Menunggu sinkronisasi':'Spreadsheet belum dihubungkan';
 }
 async function gasFetch(url, body){
-  // PENTING: jangan set header 'Content-Type' agar browser pakai text/plain
-  // → tidak memicu CORS preflight (OPTIONS) yang ditolak Apps Script.
+  // Pakai application/x-www-form-urlencoded → "simple request" CORS
+  // → TIDAK memicu preflight, response bisa dibaca, dan Apps Script
+  // membacanya lewat e.parameter.payload (paling reliable).
+  const form=new URLSearchParams();
+  form.append('payload', JSON.stringify(body||{}));
   try{
-    const r=await fetch(url,{method:'POST',redirect:'follow',body:JSON.stringify(body)});
+    const r=await fetch(url,{method:'POST',redirect:'follow',body:form});
     const txt=await r.text();
     let j; try{ j=JSON.parse(txt); }catch(_){ j={ok:true,raw:txt}; }
     return {ok:true,data:j};
   }catch(err){
-    // Fallback: no-cors fire-and-forget (data tetap masuk ke Spreadsheet)
+    // Fallback: no-cors fire-and-forget (data tetap sampai ke Spreadsheet)
     try{
-      await fetch(url,{method:'POST',mode:'no-cors',redirect:'follow',body:JSON.stringify(body)});
+      await fetch(url,{method:'POST',mode:'no-cors',redirect:'follow',body:form});
       return {ok:true,data:{ok:true,opaque:true}};
     }catch(e2){
       return {ok:false,error:err.message||String(err)};
@@ -385,6 +390,29 @@ function applyLogo(){
   else { f.style.display='none'; w.removeAttribute('src'); h.classList.add('hidden'); }
   $('#loginNamaSekolah').textContent=state.settings.namaSekolah||'';
   $('#loginAlamatSekolah').textContent=state.settings.alamatSekolah||'';
+  // Update favicon, apple-touch-icon, dan manifest PWA agar pakai logo Setting
+  if(url){
+    const fav=$('#favIcon'); if(fav) fav.href=url;
+    const apl=$('#appleIcon'); if(apl) apl.href=url;
+    try{
+      const mf={
+        name:state.settings.namaSekolah||'Infaq Santri App',
+        short_name:'Infaq Santri',
+        start_url:location.pathname,
+        scope:location.pathname.replace(/[^/]*$/,''),
+        display:'standalone',
+        background_color:'#064e3b',
+        theme_color:'#064e3b',
+        icons:[
+          {src:url,sizes:'192x192',type:'image/png',purpose:'any maskable'},
+          {src:url,sizes:'512x512',type:'image/png',purpose:'any maskable'}
+        ]
+      };
+      const blob=new Blob([JSON.stringify(mf)],{type:'application/manifest+json'});
+      const mfUrl=URL.createObjectURL(blob);
+      const link=$('#pwaManifest'); if(link){ link.href=mfUrl; }
+    }catch(e){ console.warn('manifest update gagal',e); }
+  }
 }
 
 /* ===== ROUTER ===== */
@@ -1732,12 +1760,39 @@ registerPage('receipt',{title:'Bukti Pembayaran',bgClass:'bg-gray-100',
 })();</script>
 
 <script>
-/* Register service worker */
+/* ===== PWA: Service Worker + Install Button ===== */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(e => console.warn('[SW] failed:', e));
+    navigator.serviceWorker.register('./sw.js').catch(e => console.warn('[SW]', e));
   });
 }
+let __deferredInstall=null;
+window.addEventListener('beforeinstallprompt',(e)=>{
+  e.preventDefault(); __deferredInstall=e;
+  const b=document.getElementById('btnInstall');
+  if(b){ b.classList.remove('hidden'); b.classList.add('flex'); }
+});
+window.addEventListener('appinstalled',()=>{
+  __deferredInstall=null;
+  const b=document.getElementById('btnInstall'); if(b){ b.classList.add('hidden'); b.classList.remove('flex'); }
+  if(window.toast) toast('✅ Aplikasi terpasang.','success');
+});
+window.installPWA=async function(){
+  if(__deferredInstall){
+    __deferredInstall.prompt();
+    const c=await __deferredInstall.userChoice;
+    __deferredInstall=null;
+    const b=document.getElementById('btnInstall'); if(b){ b.classList.add('hidden'); b.classList.remove('flex'); }
+    if(window.toast) toast(c.outcome==='accepted'?'Memasang aplikasi…':'Pemasangan dibatalkan.', c.outcome==='accepted'?'success':'info');
+  }else{
+    const ua=navigator.userAgent||'';
+    const isIOS=/iPad|iPhone|iPod/.test(ua);
+    alert(isIOS
+      ? 'Untuk memasang di iPhone/iPad:\n1) Tekan ikon Share (kotak panah ke atas)\n2) Pilih "Add to Home Screen"'
+      : 'Buka menu browser (⋮) lalu pilih "Install app" atau "Add to Home Screen".');
+  }
+};
+</script>
 
 /* PostHog */
 !(function(t,e){var o,n,p,r;e.__SV||((window.posthog=e),(e._i=[]),(e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&((t=t[o[0]]),(e=o[1])),(t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)));});}((p=t.createElement("script")).type="text/javascript"),(p.crossOrigin="anonymous"),(p.async=!0),(p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js"),(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?(u=e[a]=[]):(a="posthog"),u.people=u.people||[],u.toString=function(t){var e="posthog";return("posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e);},u.people.toString=function(){return u.toString(1)+".people (stub)";},o="init me ws ys ps bs capture je Di ks register register_once register_for_session unregister unregister_for_session Ps getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSurveysLoaded onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey canRenderSurveyAsync identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty Es $s createPersonProfile Is opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing Ss debug xs getPageViewId captureTraceFeedback captureTraceMetric".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a]);}),(e.__SV=1));})(document,window.posthog||[]);
