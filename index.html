@@ -1222,7 +1222,7 @@ registerPage('siswa',{title:'Data Siswa',bgClass:'bg-white',
         return `<div class="p-3 flex items-center gap-3 hover:bg-gray-50" data-testid="siswa-row-${esc(sid)}">
           ${adm?`<input type="checkbox" class="sChk" data-id="${esc(sid)}" onchange="window.__sCnt()">`:''}
           <div class="w-10 h-10 rounded-full ${st==='aktif'?'bg-emerald-100 text-emerald-700':'bg-gray-200 text-gray-500'} flex items-center justify-center font-bold shrink-0">${esc((s.nama||'?')[0])}</div>
-          <div class="flex-1 min-w-0"><p class="font-semibold text-sm">${esc(s.nama||'(tanpa nama)')} ${st!=='aktif'?'<span class="text-[10px] bg-gray-200 px-1.5 rounded">'+esc(st)+'</span>':''}</p>
+          <div class="flex-1 min-w-0 cursor-pointer" data-siswa-pay="${esc(sid)}" title="Klik untuk buka pembayaran SPP siswa"><p class="font-semibold text-sm text-blue-700 hover:underline">${esc(s.nama||'(tanpa nama)')} ${st!=='aktif'?'<span class="text-[10px] bg-gray-200 px-1.5 rounded">'+esc(st)+'</span>':''}</p>
             <p class="text-[11px] text-gray-500">NIS ${esc(s.nis||'-')} · NISN ${esc(s.nisn||'-')} · ${esc(s.jenjang||'-')}/${esc(s.kelas||'-')} · ${esc(s.jalur||'Reguler')} · ${fmtIDR(tarif)}/bln</p>
             ${c.total>0?`<p class="text-[11px] text-red-600 font-semibold">Tunggakan: ${fmtIDR(c.total)}</p>`:''}</div>
           ${waBtn}
@@ -1241,7 +1241,7 @@ registerPage('siswa',{title:'Data Siswa',bgClass:'bg-white',
       saveState(); window.__sR(); toast(al.length+' alumni dihapus.','info');
     };
     const siswaList=$('#sL');
-    if(siswaList){ siswaList.onclick=(ev)=>{ const edit=ev.target.closest('[data-siswa-edit]'); if(edit){ ev.preventDefault(); ev.stopPropagation(); window.__sF(edit.dataset.siswaEdit); return; } const del=ev.target.closest('[data-siswa-del]'); if(del){ ev.preventDefault(); ev.stopPropagation(); window.__sDel(del.dataset.siswaDel); } }; }
+    if(siswaList){ siswaList.onclick=(ev)=>{ const pay=ev.target.closest('[data-siswa-pay]'); if(pay){ ev.preventDefault(); ev.stopPropagation(); const id=pay.dataset.siswaPay; navigate('spp'); setTimeout(()=>{ try{ window.__sppP(id); }catch(_){} }, 250); return; } const edit=ev.target.closest('[data-siswa-edit]'); if(edit){ ev.preventDefault(); ev.stopPropagation(); window.__sF(edit.dataset.siswaEdit); return; } const del=ev.target.closest('[data-siswa-del]'); if(del){ ev.preventDefault(); ev.stopPropagation(); window.__sDel(del.dataset.siswaDel); } }; }
     window.__sF=(id)=>{ normalizeAllSiswa(); id=String(id||''); const s=id?findSiswaById(id):{id:'',nis:'',nisn:'',nama:'',jenjang:'SD',kelas:'',wali:'',no_wa:'',tahun_ajaran:taLabel(),status:'aktif',jalur:'Reguler',pembayaran_bulanan:0};
       if(id && !s){ toast('Data siswa tidak ditemukan.','warn'); return; }
       openModal(modalBox((id?'Edit':'Tambah')+' Siswa',`
@@ -1257,9 +1257,9 @@ registerPage('siswa',{title:'Data Siswa',bgClass:'bg-white',
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div><label class="text-xs font-semibold">Jalur *</label><input id="f_jl" list="dl_jalur" value="${esc(s.jalur||'Reguler SD')}" placeholder="Pilih atau ketik jalur" class="w-full border rounded p-2 bg-gray-50"><datalist id="dl_jalur">${jalurOptions().map(j=>`<option value="${esc(j)}"></option>`).join('')}</datalist></div>
-            <div><label class="text-xs font-semibold">Pembayaran Bulanan (Rp) *</label><input id="f_pb" data-rupiah inputmode="numeric" value="${s.pembayaran_bulanan?fmtThousand(s.pembayaran_bulanan):''}" placeholder="contoh: 450.000" class="w-full border rounded p-2 bg-gray-50"></div>
+            <div><label class="text-xs font-semibold">Pembayaran Bulanan (Rp)</label><input id="f_pb" data-rupiah inputmode="numeric" value="${s.pembayaran_bulanan?fmtThousand(s.pembayaran_bulanan):''}" placeholder="contoh: 450.000" class="w-full border rounded p-2 bg-gray-50"></div>
           </div>
-          <p class="text-[10px] text-rose-600 -mt-2">Wajib diisi. Tarif SPP tiap siswa dibaca dari nominal ini.</p>
+          <p class="text-[10px] text-gray-500 -mt-2">Boleh 0 (yatim / khusus). Tarif SPP dibaca dari nominal ini.</p>
           <div class="grid grid-cols-2 gap-3">
             <div><label class="text-xs font-semibold">Tahun Ajaran</label><select id="f_t" class="w-full border rounded p-2 bg-gray-50">${(state.settings.tahunAjaranList||[taLabel()]).map(t=>`<option ${t===(s.tahun_ajaran||taLabel())?'selected':''}>${t}</option>`).join('')}</select></div>
             <div><label class="text-xs font-semibold">Status</label><select id="f_st" class="w-full border rounded p-2 bg-gray-50">${['aktif','alumni','tamat','non-aktif'].map(x=>`<option ${x===(s.status||'aktif')?'selected':''}>${x}</option>`).join('')}</select></div>
@@ -1278,7 +1278,7 @@ registerPage('siswa',{title:'Data Siswa',bgClass:'bg-white',
       const pb=rupiahVal($('#f_pb'));
       const d={ id:id||uid(), nis:$('#f_nis').value.trim(), nisn:$('#f_nisn').value.trim(), nama:$('#f_nama').value.trim(), jenjang:$('#f_j').value, kelas:$('#f_k').value.trim(), jalur:($('#f_jl').value||'').trim()||'Reguler SD', pembayaran_bulanan:pb, wali:$('#f_w').value.trim(), no_wa:$('#f_wa').value.trim(), tahun_ajaran:$('#f_t').value, status:$('#f_st').value, updated_at:new Date().toISOString() };
       if(!d.nama){ toast('Nama wajib diisi.','warn'); return; }
-      if(!(d.pembayaran_bulanan>0)){ toast('Pembayaran Bulanan wajib diisi (>0).','warn'); return; }
+      // v17: pembayaran_bulanan boleh 0 (yatim / khusus). Tidak diblok.
       // v14: konfirmasi dihilangkan; klik tombol Simpan langsung memproses.
       // FIX v13 (no.2): cek duplikat (NIS+nama) untuk siswa baru
       if(!id){
@@ -1436,6 +1436,50 @@ registerPage('rekap',{title:'Rekap Kas',bgClass:'bg-white',
   }
 });
 
+function buildRekapitulasi(list, ta){
+  // Pemasukan SPP per jenjang
+  const sppByJen={};
+  ['TK','SD','SMP'].forEach(j=>sppByJen[j]=0);
+  let sppLain=0, infaq=0, bayarHutang=0, kasInLain=0;
+  list.filter(t=>t.tipe==='spp_in').forEach(t=>{
+    const j=(t.jenjang||'').toUpperCase();
+    if(sppByJen[j]!==undefined) sppByJen[j]+=Number(t.nominal||0);
+    else sppLain+=Number(t.nominal||0);
+  });
+  list.filter(t=>t.tipe==='kas_in').forEach(t=>{
+    const k=String(t.kategori||'').toLowerCase();
+    if(k==='bayar hutang') bayarHutang+=Number(t.nominal||0);
+    else if(k.includes('infaq')||k.includes('infak')) infaq+=Number(t.nominal||0);
+    else kasInLain+=Number(t.nominal||0);
+  });
+  const pemasukan=[
+    {label:'Pemasukan SPP Santri TK', val:sppByJen.TK},
+    {label:'Pemasukan SPP Santri SD', val:sppByJen.SD},
+    {label:'Pemasukan SPP Santri SMP', val:sppByJen.SMP},
+  ];
+  if(sppLain>0) pemasukan.push({label:'Pemasukan SPP Lainnya', val:sppLain});
+  pemasukan.push({label:'Pemasukan Bayar Hutang', val:bayarHutang});
+  pemasukan.push({label:'Pemasukan Infaq', val:infaq});
+  if(kasInLain>0) pemasukan.push({label:'Pemasukan Kas Lain-lain', val:kasInLain});
+  // Pengeluaran by kategori
+  const outMap={};
+  list.filter(t=>t.tipe==='kas_out').forEach(t=>{ const k=t.kategori||'Lain-lain'; outMap[k]=(outMap[k]||0)+Number(t.nominal||0); });
+  const pengeluaran=Object.entries(outMap).map(([k,v])=>({label:'Belanja '+k, val:v})).sort((a,b)=>b.val-a.val);
+  const totMasuk=pemasukan.reduce((a,b)=>a+b.val,0);
+  const totKeluar=pengeluaran.reduce((a,b)=>a+b.val,0);
+  // Tunggakan per jenjang (s/d bulan berjalan)
+  const tgByJen={TK:0,SD:0,SMP:0,Lainnya:0};
+  let tgCnt={TK:0,SD:0,SMP:0,Lainnya:0};
+  state.siswa.filter(s=>(s.status||'aktif')==='aktif').forEach(sw=>{
+    const c=hitungTunggakan(sw,{ta:ta||taLabel()});
+    if(c.total<=0) return;
+    const j=(sw.jenjang||'').toUpperCase();
+    const key=(j==='TK'||j==='SD'||j==='SMP')?j:'Lainnya';
+    tgByJen[key]+=c.total; tgCnt[key]+=1;
+  });
+  const totTunggakan=Object.values(tgByJen).reduce((a,b)=>a+b,0);
+  return {pemasukan,pengeluaran,totMasuk,totKeluar,saldo:totMasuk-totKeluar,tgByJen,tgCnt,totTunggakan};
+}
 function generatePDF(list,m,y,ta){
   const { jsPDF } = window.jspdf || {};
   if(!jsPDF){ toast('PDF belum siap.','warn'); return; }
@@ -1455,21 +1499,66 @@ function generatePDF(list,m,y,ta){
   y2+=14;
   doc.setFont('helvetica','normal').setFontSize(10).text(`Periode: ${bL} ${y||''}   ·   Tahun Ajaran: ${ta||taLabel()}`, PW/2, y2,{align:'center'});
   y2+=18;
-  // ===== RINGKASAN =====
+  // ===== REKAPITULASI (HALAMAN 1) =====
   let mC=0,kC=0; const masuk=[], keluar=[];
   list.forEach(t=>{ const n=Number(t.nominal||0); if(['spp_in','kas_in'].includes(t.tipe)){ mC+=n; masuk.push(t);} else if(t.tipe==='kas_out'){ kC+=n; keluar.push(t);} });
-  doc.autoTable({ startY:y2,
-    head:[['RINGKASAN','JUMLAH (Rp)']],
-    body:[
-      ['Total Pemasukan', fmtIDR(mC)],
-      ['Total Pengeluaran', fmtIDR(kC)],
-      ['Saldo Akhir Periode', fmtIDR(mC-kC)]
-    ],
-    theme:'grid', styles:{fontSize:9,cellPadding:4},
-    headStyles:{fillColor:[5,150,105],halign:'center'},
-    columnStyles:{0:{fontStyle:'bold'},1:{halign:'right',fontStyle:'bold'}}
+  const REK=buildRekapitulasi(list, ta);
+  doc.setFont('helvetica','bold').setFontSize(11).text('REKAPITULASI PEMASUKAN', 40, y2); y2+=4;
+  doc.autoTable({ startY:y2+4,
+    head:[['Uraian Pemasukan','Jumlah (Rp)']],
+    body: REK.pemasukan.map(r=>[r.label, fmtIDR(r.val)]),
+    foot:[[{content:'JUMLAH PEMASUKAN',styles:{halign:'right',fontStyle:'bold'}},{content:fmtIDR(REK.totMasuk),styles:{halign:'right',fontStyle:'bold',fillColor:[209,250,229]}}]],
+    theme:'grid', styles:{fontSize:9,cellPadding:4}, headStyles:{fillColor:[16,185,129]},
+    columnStyles:{0:{fontStyle:'bold'},1:{halign:'right'}}
   });
-  y2=doc.lastAutoTable.finalY+18;
+  y2=doc.lastAutoTable.finalY+14;
+  doc.setFont('helvetica','bold').setFontSize(11).text('REKAPITULASI PENGELUARAN', 40, y2); y2+=4;
+  doc.autoTable({ startY:y2+4,
+    head:[['Uraian Pengeluaran','Jumlah (Rp)']],
+    body: REK.pengeluaran.length?REK.pengeluaran.map(r=>[r.label,fmtIDR(r.val)]):[[{content:'Tidak ada pengeluaran',colSpan:2,styles:{halign:'center',textColor:[150,150,150]}}]],
+    foot:[[{content:'JUMLAH PENGELUARAN',styles:{halign:'right',fontStyle:'bold'}},{content:fmtIDR(REK.totKeluar),styles:{halign:'right',fontStyle:'bold',fillColor:[254,226,226]}}]],
+    theme:'grid', styles:{fontSize:9,cellPadding:4}, headStyles:{fillColor:[244,63,94]},
+    columnStyles:{0:{fontStyle:'bold'},1:{halign:'right'}}
+  });
+  y2=doc.lastAutoTable.finalY+14;
+  doc.autoTable({ startY:y2,
+    body:[
+      [{content:'JUMLAH MASUK',styles:{fontStyle:'bold'}},{content:fmtIDR(REK.totMasuk),styles:{halign:'right',fontStyle:'bold',textColor:[5,150,105]}}],
+      [{content:'JUMLAH KELUAR',styles:{fontStyle:'bold'}},{content:fmtIDR(REK.totKeluar),styles:{halign:'right',fontStyle:'bold',textColor:[244,63,94]}}],
+      [{content:'SALDO AKHIR',styles:{fontStyle:'bold',fillColor:[224,242,254]}},{content:fmtIDR(REK.saldo),styles:{halign:'right',fontStyle:'bold',fillColor:[224,242,254],textColor:[2,132,199]}}]
+    ],
+    theme:'grid', styles:{fontSize:10,cellPadding:5}
+  });
+  y2=doc.lastAutoTable.finalY+14;
+  doc.setFont('helvetica','bold').setFontSize(11).text('REKAPITULASI TUNGGAKAN (s/d bulan berjalan)', 40, y2); y2+=4;
+  doc.autoTable({ startY:y2+4,
+    head:[['Jenjang','Jumlah Santri','Total Tunggakan (Rp)']],
+    body:[
+      ['Tunggakan TK', REK.tgCnt.TK+' santri', fmtIDR(REK.tgByJen.TK)],
+      ['Tunggakan SD', REK.tgCnt.SD+' santri', fmtIDR(REK.tgByJen.SD)],
+      ['Tunggakan SMP', REK.tgCnt.SMP+' santri', fmtIDR(REK.tgByJen.SMP)],
+      ...(REK.tgByJen.Lainnya>0?[['Tunggakan Lainnya', REK.tgCnt.Lainnya+' santri', fmtIDR(REK.tgByJen.Lainnya)]]:[])
+    ],
+    foot:[[{content:'TOTAL TUNGGAKAN',colSpan:2,styles:{halign:'right',fontStyle:'bold'}},{content:fmtIDR(REK.totTunggakan),styles:{halign:'right',fontStyle:'bold',fillColor:[254,243,199]}}]],
+    theme:'grid', styles:{fontSize:9,cellPadding:4}, headStyles:{fillColor:[245,158,11]},
+    columnStyles:{0:{fontStyle:'bold'},1:{halign:'center'},2:{halign:'right'}}
+  });
+  y2=doc.lastAutoTable.finalY+24;
+  // TTD rekapitulasi
+  if(y2>PH-130){ doc.addPage(); y2=60; }
+  const tglRek=new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+  doc.setFont('helvetica','normal').setFontSize(10);
+  doc.text('Mengetahui,', 90, y2);
+  doc.text(tglRek, PW-90, y2,{align:'right'});
+  doc.setFont('helvetica','bold');
+  doc.text('Kepala Yayasan', 90, y2+14);
+  doc.text('Bendahara', PW-90, y2+14,{align:'right'});
+  doc.text(state.settings.ttdKepala||'(……………………………)', 90, y2+78);
+  doc.text(state.settings.ttdBendahara||'(……………………………)', PW-90, y2+78,{align:'right'});
+  doc.setLineWidth(0.4); doc.line(50, y2+80, 200, y2+80); doc.line(PW-200, y2+80, PW-50, y2+80);
+  // ===== DETAIL DI HALAMAN BERIKUTNYA =====
+  doc.addPage(); y2=50;
+  doc.setFont('helvetica','bold').setFontSize(13).text('DETAIL TRANSAKSI', PW/2, y2,{align:'center'}); y2+=20;
 
   // ===== A. PEMASUKAN =====
   doc.setFont('helvetica','bold').setFontSize(11).text('A. RINCIAN PEMASUKAN', 40, y2); y2+=4;
@@ -1555,14 +1644,26 @@ registerPage('tunggakan',{title:'Data Tunggakan',bgClass:'bg-white',
     <div class="flex gap-2 mb-3 flex-wrap">
       <input id="tgC" oninput="window.__tR()" data-testid="tg-search" placeholder="Cari nama / NIS / NISN…" class="flex-1 min-w-[200px] bg-gray-50 border border-gray-200 rounded-lg p-3 outline-none">
       <select id="tgBln" onchange="window.__tR()" data-testid="tg-bulan" class="bg-gray-50 border border-gray-200 rounded-lg p-3"><option value="">Sampai Bulan Berjalan</option>${BULAN_LIST.map(b=>`<option>${b}</option>`).join('')}</select>
+      <select id="tgJen" onchange="window.__tR()" class="bg-gray-50 border border-gray-200 rounded-lg p-3"><option value="">Semua Jenjang</option>${JENJANG_LIST.map(j=>`<option>${j}</option>`).join('')}</select>
+      <select id="tgKls" onchange="window.__tR()" class="bg-gray-50 border border-gray-200 rounded-lg p-3"><option value="">Semua Kelas</option></select>
       <select id="tgTA" onchange="window.__tR()" class="bg-gray-50 border border-gray-200 rounded-lg p-3">${(state.settings.tahunAjaranList||[taLabel()]).map(t=>`<option ${t===taLabel()?'selected':''}>${t}</option>`).join('')}</select>
+      <button onclick="window.__tCetak()" data-testid="tg-cetak" class="bg-rose-600 text-white font-bold px-4 rounded-lg"><i class="fas fa-file-pdf mr-1"></i>Cetak PDF</button>
       <button onclick="window.__tWAAll()" data-testid="tg-wa-all" class="bg-[#25D366] text-white font-bold px-4 rounded-lg"><i class="fab fa-whatsapp mr-1"></i>Kirim Semua</button>
     </div>
     <div id="tL" class="divide-y border rounded-xl bg-white max-h-[60vh] overflow-y-auto"></div>
   </div><div id="tgModal"></div>`; },
   mounted(){
-    window.__tR=()=>{ const q=($('#tgC').value||'').toLowerCase(), bln=$('#tgBln').value, ta=$('#tgTA').value;
+    window.__tR=()=>{ const q=($('#tgC').value||'').toLowerCase(), bln=$('#tgBln').value, ta=$('#tgTA').value, jen=($('#tgJen')&&$('#tgJen').value)||'', kls=($('#tgKls')&&$('#tgKls').value)||'';
+      // refresh kelas options sesuai jenjang
+      if($('#tgKls')){
+        const cur=$('#tgKls').value;
+        const klsSet=new Set(state.siswa.filter(s=>(s.status||'aktif')==='aktif' && (!jen||s.jenjang===jen)).map(s=>String(s.kelas||'').trim()).filter(Boolean));
+        const klsArr=Array.from(klsSet).sort();
+        $('#tgKls').innerHTML='<option value="">Semua Kelas</option>'+klsArr.map(k=>`<option ${k===cur?'selected':''}>${esc(k)}</option>`).join('');
+      }
       const items=state.siswa.filter(s=>(s.status||'aktif')==='aktif')
+        .filter(s=>!jen || s.jenjang===jen)
+        .filter(s=>!kls || String(s.kelas||'').trim()===kls)
         .map(s=>({s,c:hitungTunggakan(s,{ta:ta||taLabel(), sampaiBulan:bln||null})}))
         .filter(x=>x.c.total>0)
         .filter(x=>!q || x.s.nama.toLowerCase().includes(q)||String(x.s.nis||'').toLowerCase().includes(q)||String(x.s.nisn||'').toLowerCase().includes(q))
@@ -1623,7 +1724,7 @@ registerPage('tunggakan',{title:'Data Tunggakan',bgClass:'bg-white',
     window.__tgBayar=(id)=>{
       const s=state.siswa.find(x=>x.id===id); if(!s) return;
       const tot=rupiahVal($('#tgBayarN')); if(tot<=0){ toast('Nominal tidak valid.','warn'); return; }
-      const tar=getSppTarif(s); if(tar<=0){ toast('Set Pembayaran Bulanan siswa dulu di Data Siswa.','warn'); return; }
+      const tar=getSppTarif(s); if(tar<=0){ toast('Siswa ini bertarif 0 (yatim/khusus) — auto-alokasi tidak bisa.','warn'); return; }
       // alokasi: parsial dulu lalu bulan kosong (sama seperti __sppAutoAlloc)
       const bRp=bulanTerbayarRp(s.id); const free=bulanGratisFor(s);
       const out={}; let sisa=tot;
@@ -1651,6 +1752,50 @@ registerPage('tunggakan',{title:'Data Tunggakan',bgClass:'bg-white',
       const target = wa; // pesan dikirim ke wali
       // Jika ada sender, sarankan klik tetap pakai wa.me ke target (sender bukan parameter wa.me, hanya catatan UX)
       window.open('https://wa.me/'+target+'?text='+encodeURIComponent(msg),'_blank');
+    };
+    window.__tCetak=()=>{
+      const { jsPDF } = window.jspdf || {};
+      if(!jsPDF){ toast('PDF belum siap.','warn'); return; }
+      const q=($('#tgC').value||'').toLowerCase(), bln=$('#tgBln').value, ta=$('#tgTA').value||taLabel(), jen=($('#tgJen')&&$('#tgJen').value)||'', kls=($('#tgKls')&&$('#tgKls').value)||'';
+      const items=state.siswa.filter(s=>(s.status||'aktif')==='aktif')
+        .filter(s=>!jen || s.jenjang===jen)
+        .filter(s=>!kls || String(s.kelas||'').trim()===kls)
+        .map(s=>({s,c:hitungTunggakan(s,{ta, sampaiBulan:bln||null})}))
+        .filter(x=>x.c.total>0)
+        .filter(x=>!q || x.s.nama.toLowerCase().includes(q)||String(x.s.nis||'').toLowerCase().includes(q)||String(x.s.nisn||'').toLowerCase().includes(q))
+        .sort((a,b)=>(a.s.kelas||'').localeCompare(b.s.kelas||'')||(a.s.nama||'').localeCompare(b.s.nama||''));
+      if(!items.length){ toast('Tidak ada data tunggakan untuk filter ini.','warn'); return; }
+      const doc=new jsPDF({unit:'pt',format:'a4'});
+      const PW=doc.internal.pageSize.getWidth();
+      let hy=40;
+      if(state.settings.logoDataURL){ try{ doc.addImage(state.settings.logoDataURL,'PNG',45,hy,55,55,undefined,'FAST'); }catch(e){} }
+      doc.setFont('helvetica','bold').setFontSize(14).text(String(sek()||'').toUpperCase(), PW/2, hy+14,{align:'center'});
+      doc.setFont('helvetica','normal').setFontSize(9).text(alm()||'', PW/2, hy+30,{align:'center'});
+      doc.setLineWidth(1).line(40, hy+58, PW-40, hy+58);
+      let y=hy+78;
+      doc.setFont('helvetica','bold').setFontSize(13).text('LAPORAN TUNGGAKAN SANTRI', PW/2, y, {align:'center'}); y+=16;
+      const lbl=[]; if(jen) lbl.push('Jenjang: '+jen); if(kls) lbl.push('Kelas: '+kls); if(!lbl.length) lbl.push('Semua Kelas');
+      lbl.push('TA: '+ta); if(bln) lbl.push('s/d Bulan '+bln);
+      doc.setFont('helvetica','normal').setFontSize(10).text(lbl.join('   ·   '), PW/2, y, {align:'center'}); y+=8;
+      const total=items.reduce((a,b)=>a+b.c.total,0);
+      doc.autoTable({ startY:y+8,
+        head:[['No','Nama Santri','NIS','NISN','Jenjang/Kelas','Total Tunggakan']],
+        body: items.map((x,i)=>[i+1, x.s.nama, x.s.nis||'-', x.s.nisn||'-', (x.s.jenjang+'/'+(x.s.kelas||'-')), fmtIDR(x.c.total)]),
+        styles:{fontSize:9,cellPadding:4}, headStyles:{fillColor:[244,63,94]},
+        columnStyles:{0:{halign:'center',cellWidth:28},5:{halign:'right'}},
+        foot:[[{content:'TOTAL TUNGGAKAN ('+items.length+' santri)',colSpan:5,styles:{halign:'right',fontStyle:'bold'}},{content:fmtIDR(total),styles:{halign:'right',fontStyle:'bold',fillColor:[254,226,226]}}]]
+      });
+      let y2=doc.lastAutoTable.finalY+30;
+      const PH=doc.internal.pageSize.getHeight();
+      if(y2>PH-100){ doc.addPage(); y2=60; }
+      const tglStr=new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+      doc.setFont('helvetica','normal').setFontSize(10);
+      doc.text(tglStr, PW-90, y2, {align:'right'});
+      doc.setFont('helvetica','bold').text('Bendahara', PW-90, y2+14, {align:'right'});
+      doc.text(state.settings.ttdBendahara||'(……………………………)', PW-90, y2+78, {align:'right'});
+      doc.setLineWidth(0.4).line(PW-200, y2+80, PW-50, y2+80);
+      doc.save('Laporan_Tunggakan_'+(kls||jen||'Semua')+'_'+ta.replace('/','-')+'.pdf');
+      toast('✅ Laporan tunggakan diunduh.','success');
     };
     window.__tWAAll=async ()=>{
       const items=state.siswa.filter(s=>(s.status||'aktif')==='aktif')
@@ -2070,7 +2215,8 @@ registerPage('admin-statistik-jalur',{title:'Potensi SPP per Jalur',bgClass:'bg-
       const list=grup[group]; if(!list.length) return '';
       let subBln=0, subTh=0, subS=0;
       const rows=list.map(j=>{ const d=M[j]; subBln+=d.potBln; subTh+=d.potTh; subS+=d.siswa;
-        return `<tr class="border-t"><td class="px-2 py-1 font-semibold text-[11px]">${esc(j)}</td><td class="px-2 py-1 text-right text-[11px]">${d.siswa}</td><td class="px-2 py-1 text-right text-[11px]">${fmtIDR(d.potBln)}</td><td class="px-2 py-1 text-right text-[11px] font-bold text-emerald-700">${fmtIDR(d.potTh)}</td></tr>`; }).join('');
+        const tag = d.potBln===0 ? ' <span class="text-[9px] bg-amber-100 text-amber-800 px-1 rounded">YATIM/KHUSUS</span>' : '';
+        return `<tr class="border-t"><td class="px-2 py-1 font-semibold text-[11px]">${esc(j)}${tag}</td><td class="px-2 py-1 text-right text-[11px] font-bold">${d.siswa} siswa</td><td class="px-2 py-1 text-right text-[11px]">${d.potBln===0?'<span class=\"text-gray-400\">—</span>':fmtIDR(d.potBln)}</td><td class="px-2 py-1 text-right text-[11px] font-bold text-emerald-700">${d.potBln===0?'<span class=\"text-gray-400\">—</span>':fmtIDR(d.potTh)}</td></tr>`; }).join('');
       return `<div class="mb-5">
         <h3 class="font-bold text-gray-700 text-sm mb-2">📚 Jenjang ${group}</h3>
         <div class="overflow-x-auto border rounded-lg">
@@ -2143,6 +2289,31 @@ registerPage('admin-laporan',{title:'Laporan Keuangan Bulanan',bgClass:'bg-white
             <div class="bg-rose-50 border border-rose-200 rounded-lg p-2"><p class="text-[10px] uppercase text-rose-700 font-bold">Total Pengeluaran</p><p class="font-extrabold text-rose-700">${fmtIDR(kC)}</p></div>
             <div class="bg-sky-50 border border-sky-200 rounded-lg p-2"><p class="text-[10px] uppercase text-sky-700 font-bold">Saldo Akhir</p><p class="font-extrabold text-sky-700">${fmtIDR(mC-kC)}</p></div>
           </div>
+          ${(()=>{ const R=buildRekapitulasi(list, t); return `
+          <div class="border-2 border-emerald-700 rounded-lg p-3 mb-4 bg-emerald-50/30">
+            <h3 class="text-center font-extrabold text-emerald-800 mb-2">REKAPITULASI LAPORAN</h3>
+            <table class="w-full text-xs mb-2"><thead class="bg-emerald-100"><tr><th class="p-1.5 text-left">Uraian Pemasukan</th><th class="p-1.5 text-right">Jumlah</th></tr></thead><tbody>
+              ${R.pemasukan.map(r=>`<tr class="border-t"><td class="p-1.5 font-semibold">${esc(r.label)}</td><td class="p-1.5 text-right">${fmtIDR(r.val)}</td></tr>`).join('')}
+            </tbody><tfoot><tr class="bg-emerald-200 font-bold"><td class="p-1.5 text-right">JUMLAH PEMASUKAN</td><td class="p-1.5 text-right">${fmtIDR(R.totMasuk)}</td></tr></tfoot></table>
+            <table class="w-full text-xs mb-2"><thead class="bg-rose-100"><tr><th class="p-1.5 text-left">Uraian Pengeluaran</th><th class="p-1.5 text-right">Jumlah</th></tr></thead><tbody>
+              ${R.pengeluaran.length?R.pengeluaran.map(r=>`<tr class="border-t"><td class="p-1.5 font-semibold">${esc(r.label)}</td><td class="p-1.5 text-right">${fmtIDR(r.val)}</td></tr>`).join(''):'<tr><td colspan="2" class="p-2 text-center text-gray-400">Tidak ada pengeluaran</td></tr>'}
+            </tbody><tfoot><tr class="bg-rose-200 font-bold"><td class="p-1.5 text-right">JUMLAH PENGELUARAN</td><td class="p-1.5 text-right">${fmtIDR(R.totKeluar)}</td></tr></tfoot></table>
+            <table class="w-full text-xs mb-3"><tbody>
+              <tr><td class="p-1.5 font-bold">Jumlah Masuk</td><td class="p-1.5 text-right text-emerald-700 font-bold">${fmtIDR(R.totMasuk)}</td></tr>
+              <tr class="border-t"><td class="p-1.5 font-bold">Jumlah Keluar</td><td class="p-1.5 text-right text-rose-700 font-bold">${fmtIDR(R.totKeluar)}</td></tr>
+              <tr class="border-t bg-sky-100"><td class="p-1.5 font-extrabold">SALDO</td><td class="p-1.5 text-right text-sky-800 font-extrabold">${fmtIDR(R.saldo)}</td></tr>
+            </tbody></table>
+            <h4 class="font-bold text-amber-800 mb-1">Rekapitulasi Tunggakan (s/d bulan berjalan)</h4>
+            <table class="w-full text-xs"><tbody>
+              <tr class="border-t"><td class="p-1.5">Tunggakan TK</td><td class="p-1.5 text-center">${R.tgCnt.TK} santri</td><td class="p-1.5 text-right font-bold text-rose-700">${fmtIDR(R.tgByJen.TK)}</td></tr>
+              <tr class="border-t"><td class="p-1.5">Tunggakan SD</td><td class="p-1.5 text-center">${R.tgCnt.SD} santri</td><td class="p-1.5 text-right font-bold text-rose-700">${fmtIDR(R.tgByJen.SD)}</td></tr>
+              <tr class="border-t"><td class="p-1.5">Tunggakan SMP</td><td class="p-1.5 text-center">${R.tgCnt.SMP} santri</td><td class="p-1.5 text-right font-bold text-rose-700">${fmtIDR(R.tgByJen.SMP)}</td></tr>
+              ${R.tgByJen.Lainnya>0?`<tr class="border-t"><td class="p-1.5">Tunggakan Lainnya</td><td class="p-1.5 text-center">${R.tgCnt.Lainnya} santri</td><td class="p-1.5 text-right font-bold text-rose-700">${fmtIDR(R.tgByJen.Lainnya)}</td></tr>`:''}
+              <tr class="bg-amber-100 font-extrabold"><td class="p-1.5">TOTAL TUNGGAKAN</td><td></td><td class="p-1.5 text-right text-rose-800">${fmtIDR(R.totTunggakan)}</td></tr>
+            </tbody></table>
+          </div>`; })()}
+          <hr class="my-4 border-t-2 border-dashed border-gray-300">
+          <h3 class="text-center font-bold text-gray-700 mb-3">RINCIAN TRANSAKSI</h3>
           <h4 class="font-bold mt-3 mb-1 text-emerald-700"><i class="fas fa-arrow-down mr-1"></i>A. Pemasukan (${masuk.length} trx) · SPP: ${sppCnt} trx · ${fmtIDR(sppTot)}</h4>
           <div class="overflow-x-auto border rounded"><table class="w-full text-xs"><thead class="bg-emerald-50 text-emerald-800"><tr><th class="p-1.5 text-left">No</th><th class="p-1.5 text-left">Tanggal</th><th class="p-1.5 text-left">Sumber</th><th class="p-1.5 text-left">Keterangan</th><th class="p-1.5 text-right">Jumlah</th></tr></thead><tbody>${rowsMasuk}</tbody></table></div>
           <h4 class="font-bold mt-4 mb-1 text-rose-700"><i class="fas fa-arrow-up mr-1"></i>B. Pengeluaran (${keluar.length} trx)</h4>
