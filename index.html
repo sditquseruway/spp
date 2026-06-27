@@ -307,25 +307,35 @@ async function gasFetch(url, body){
     }
   }
 }
+// FIX v13: guard agar TIDAK ada dua flushQueue jalan paralel (penyebab double row di spreadsheet).
+let __flushBusy=false;
 async function flushQueue(manual=false){
   if(!state.settings.gasUrl){ if(manual) toast('Hubungkan URL Spreadsheet dulu di Pengaturan.','warn'); setSyncDot('idle'); return false; }
   if(!navigator.onLine){ setSyncDot('err'); return false; }
+  if(__flushBusy){ return false; }
   if(queue.length===0){ if(manual) return await pushSnapshot(true); setSyncDot('ok'); return true; }
-  setSyncDot('sync');
-  const batch=queue.filter(q=>q.status==='pending').slice(0,50);
-  if(!batch.length){ setSyncDot('ok'); return true; }
-  const res=await gasFetch(state.settings.gasUrl,{action:'push',ops:batch,user:session?.username||'sistem'});
-  if(res.ok && (res.data.ok || res.data.opaque)){
-    const ids=new Set(batch.map(b=>b.op_id));
-    queue=queue.filter(q=>!ids.has(q.op_id)); saveQueue();
-    state.settings.lastSyncAt=todayISO();
-    state.syncLog.unshift({id:uid(),tanggal:todayISO(),jenis:'push',jumlah:batch.length,user:session?.username||'sistem',status:'ok',keterangan:batch.length+' operasi terkirim'+(res.data.opaque?' (mode opaque)':'')});
-    state.syncLog=state.syncLog.slice(0,200); saveState(); setSyncDot('ok');
-    if(manual) toast('✅ '+batch.length+' data tersinkron.','success');
-    return true;
-  }
-  state.syncLog.unshift({id:uid(),tanggal:todayISO(),jenis:'push',jumlah:batch.length,user:session?.username||'sistem',status:'err',keterangan:String(res.error||res.data?.error||'Gagal')});
-  saveState(); setSyncDot('err'); if(manual) toast('❌ Sinkronisasi gagal: '+(res.error||''),'error'); return false;
+  __flushBusy=true;
+  try{
+    setSyncDot('sync');
+    // hanya ambil yang benar-benar 'pending' (skip in_flight) lalu tandai in_flight
+    const batch=queue.filter(q=>q.status==='pending').slice(0,50);
+    if(!batch.length){ setSyncDot('ok'); return true; }
+    batch.forEach(b=>{ b.status='in_flight'; }); saveQueue();
+    const res=await gasFetch(state.settings.gasUrl,{action:'push',ops:batch,user:session?.username||'sistem'});
+    if(res.ok && (res.data.ok || res.data.opaque)){
+      const ids=new Set(batch.map(b=>b.op_id));
+      queue=queue.filter(q=>!ids.has(q.op_id)); saveQueue();
+      state.settings.lastSyncAt=todayISO();
+      state.syncLog.unshift({id:uid(),tanggal:todayISO(),jenis:'push',jumlah:batch.length,user:session?.username||'sistem',status:'ok',keterangan:batch.length+' operasi terkirim'+(res.data.opaque?' (mode opaque)':'')});
+      state.syncLog=state.syncLog.slice(0,200); saveState(); setSyncDot('ok');
+      if(manual) toast('✅ '+batch.length+' data tersinkron.','success');
+      return true;
+    }
+    // gagal → kembalikan ke pending utk retry
+    batch.forEach(b=>{ b.status='pending'; b.retry=(b.retry||0)+1; }); saveQueue();
+    state.syncLog.unshift({id:uid(),tanggal:todayISO(),jenis:'push',jumlah:batch.length,user:session?.username||'sistem',status:'err',keterangan:String(res.error||res.data?.error||'Gagal')});
+    saveState(); setSyncDot('err'); if(manual) toast('❌ Sinkronisasi gagal: '+(res.error||''),'error'); return false;
+  } finally { __flushBusy=false; }
 }
 async function pushSnapshot(manual=false){
   if(!state.settings.gasUrl) return false; setSyncDot('sync');
@@ -368,8 +378,8 @@ async function pullSpreadsheet(silent=false){
     if(Array.isArray(j.Siswa)) state.siswa=j.Siswa;
     if(Array.isArray(j.Transaksi)) {
       // FIX v12: defensif — pastikan setiap transaksi punya `tipe`.
-      // Row TransaksiSPP lama (sebelum kolom tipe ditambahkan) tidak punya field ini,
-      // sehingga semua filter t.tipe==='spp_in' gagal → nama siswa kosong & saldo kacau.
+      // FIX v13: dedupe by id (jaga-jaga kalau spreadsheet pernah double row).
+      const __seen=new Set();
       state.transaksi = j.Transaksi.map(t=>{
         if(!t) return t;
         if(!t.tipe){
@@ -377,7 +387,7 @@ async function pullSpreadsheet(silent=false){
           else if(Number(t.nominal||0) >= 0) t.tipe='kas_in';
         }
         return t;
-      });
+      }).filter(t=>{ const id=String(t&&t.id||''); if(!id) return true; if(__seen.has(id)) return false; __seen.add(id); return true; });
     }
     if(Array.isArray(j.Kategori)) state.kategori=j.Kategori;
     if(Array.isArray(j.TunggakanLalu)) state.tunggakanLalu=j.TunggakanLalu;
@@ -395,12 +405,15 @@ async function pullSpreadsheet(silent=false){
   }catch(err){ setSyncDot('err'); if(!silent) toast('❌ Pull gagal: '+(err.message||''),'error'); return false; }
 }
 async function manualSync(){
+  // FIX v13: jangan kirim snapshot bareng push — bisa menyebabkan baris ganda.
+  // Push antrian dulu, lalu pull untuk re-sync.
   await flushQueue(true);
-  if(state.settings.gasUrl){ await pushSnapshot(false); await pullSpreadsheet(true); }
+  if(state.settings.gasUrl){ await pullSpreadsheet(true); }
   if(currentPage) navigate(currentPage); // refresh tampilan
 }
 window.manualSync=manualSync;
-setInterval(()=>{ if(queue.some(q=>q.status==='pending')) flushQueue(false); },5000);
+// Auto-sync diperlambat (5s → 8s) supaya satu siklus selesai sebelum siklus berikut.
+setInterval(()=>{ if(!__flushBusy && queue.some(q=>q.status==='pending')) flushQueue(false); },8000);
 window.addEventListener('online',()=>{ $('#offlineBanner').classList.remove('show'); flushQueue(false); });
 window.addEventListener('offline',()=>{ $('#offlineBanner').classList.add('show'); setSyncDot('err'); });
 
@@ -482,6 +495,7 @@ function navigate(name,params={}){
   currentPage=name;
   $('#headerTitle').textContent=PAGES[name].title||name;
   $('#btnBack').classList.toggle('hidden', name==='home');
+  try { $('#btnBack').onclick=()=>window.goHome(); } catch(_){}
   $('#pageContainer').innerHTML=`<div class="page-view active no-scrollbar absolute inset-0 ${PAGES[name].bgClass||'bg-latar'} p-4 md:p-6" data-testid="page-${name}">${PAGES[name].render(params)||''}</div>`;
   if(PAGES[name].mounted) PAGES[name].mounted(params);
   window.scrollTo(0,0);
@@ -944,6 +958,9 @@ function renderSppPanel(id){
       const __pesan = '⚠️ DETEKSI INPUT GANDA\n\nSiswa "'+siswa.nama+'" SUDAH menerima input SPP hari ini:\n\n'+__rinc+'\n\nTotal sebelumnya hari ini: '+fmtIDR(__tot)+'\nAkan ditambah: '+fmtIDR(nominal)+'\n\nApakah benar ini pembayaran TAMBAHAN yang berbeda?\n\n• OK = lanjut simpan\n• Cancel = batalkan';
       if(!confirm(__pesan)) { toast('Dibatalkan.','info'); return; }
     }
+    // FIX v13 (no.4): konfirmasi final SEBELUM kirim ke spreadsheet — mencegah double input.
+    const __konfirm = 'KONFIRMASI PEMBAYARAN\n\nSiswa : '+siswa.nama+'\nBulan : '+(bulan.join(', ')||'(manual)')+'\nTotal : '+fmtIDR(nominal)+'\nMetode: '+(window.__sppMet==='cash'?'CASH':'TRANSFER')+'\n\nSimpan & kirim ke Spreadsheet?';
+    if(!confirm(__konfirm)){ toast('Dibatalkan.','info'); return; }
     if(submitBtn){ submitBtn.dataset.busy='1'; submitBtn.disabled=true; submitBtn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Menyimpan…'; }
     const u=sess(); const trx={ id:uid(), tipe:'spp_in', tanggal:new Date().toISOString(), tahun_ajaran:taLabel(), metode:window.__sppMet,
       siswa_id:siswa.id, nama_siswa:siswa.nama, nis:siswa.nis, nisn:siswa.nisn, jenjang:siswa.jenjang, kelas:siswa.kelas,
@@ -1163,13 +1180,24 @@ registerPage('siswa',{title:'Data Siswa',bgClass:'bg-white',
       bindAllRupiah();
     };
     window.__sSave=(e,id)=>{ e.preventDefault();
+      const submitBtn = e.target && e.target.querySelector ? e.target.querySelector('button[type=submit]') : null;
+      if(submitBtn && submitBtn.dataset.busy==='1') return;
       const pb=rupiahVal($('#f_pb'));
       const d={ id:id||uid(), nis:$('#f_nis').value.trim(), nisn:$('#f_nisn').value.trim(), nama:$('#f_nama').value.trim(), jenjang:$('#f_j').value, kelas:$('#f_k').value.trim(), jalur:($('#f_jl').value||'').trim()||'Reguler SD', pembayaran_bulanan:pb, wali:$('#f_w').value.trim(), no_wa:$('#f_wa').value.trim(), tahun_ajaran:$('#f_t').value, status:$('#f_st').value, updated_at:new Date().toISOString() };
       if(!d.nama){ toast('Nama wajib diisi.','warn'); return; }
+      // FIX v13 (no.4): konfirmasi sebelum kirim — mencegah klik ganda & double input.
+      if(!confirm((id?'Simpan perubahan untuk ':'Tambah siswa baru: ')+d.nama+' ('+d.jenjang+'/'+(d.kelas||'-')+')?\n\nData akan dikirim ke Spreadsheet.')) return;
+      // FIX v13 (no.2): cek duplikat (NIS+nama) untuk siswa baru
+      if(!id){
+        const key=(d.nis||'').toLowerCase()+'|'+d.nama.toLowerCase();
+        const dup=state.siswa.find(s=>(((s.nis||'').toLowerCase()+'|'+(s.nama||'').toLowerCase())===key));
+        if(dup){ toast('Siswa "'+d.nama+'" sudah ada di database.','warn'); return; }
+      }
+      if(submitBtn){ submitBtn.dataset.busy='1'; submitBtn.disabled=true; submitBtn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Menyimpan…'; }
       if(id){ const i=state.siswa.findIndex(s=>s.id===id); if(i>=0) state.siswa[i]={...state.siswa[i], ...d}; }
       else { d.created_at=new Date().toISOString(); state.siswa.unshift(d); }
       saveState(); enqueue('siswa','upsert',d); closeModal(); window.__sR(); toast('✅ Tersimpan.');
-      if(navigator.onLine && typeof flushQueue==='function') flushQueue(false).catch(()=>{});
+      // jangan panggil flushQueue lagi — enqueue() sudah memicu auto-flush sekali.
     };
     window.__sDel=(id)=>{ if(!confirm('Hapus siswa? Riwayat transaksi tidak terhapus.')) return;
       state.siswa=state.siswa.filter(x=>x.id!==id); saveState(); enqueue('siswa','delete',{id}); window.__sR(); toast('Dihapus.','info');
@@ -1183,13 +1211,13 @@ registerPage('siswa',{title:'Data Siswa',bgClass:'bg-white',
     // No.3 & No.4: Template berbentuk TABEL (Excel .xlsx) + paste tabel (TAB / koma / titik koma)
     window.__sImport=()=>{ openModal(modalBox('Import Massal Siswa (Tabel)',`
       <p class="text-xs text-gray-700 mb-2">Gunakan <b>format tabel</b> — unduh template Excel lalu isi, atau tempel langsung dari Excel/Google Sheet (otomatis terdeteksi).</p>
-      <p class="text-[11px] text-gray-500 mb-2">Kolom: <b>No · Nama · NIS · NISN · Jenjang · Jalur · No WA · Pembayaran Bulanan</b>. Kolom "No" opsional, "Bayar Tahunan" dihitung otomatis.</p>
+      <p class="text-[11px] text-gray-500 mb-2">Kolom: <b>No · Nama · NIS · NISN · Jenjang · Kelas · Jalur · No WA · Pembayaran Bulanan</b>. Kolom "No" opsional, "Bayar Tahunan" dihitung otomatis.</p>
       <div class="flex gap-2 mb-2">
         <button onclick="window.__sTemplate()" class="flex-1 text-xs bg-emerald-600 text-white py-2 rounded font-bold"><i class="fas fa-file-excel mr-1"></i>Unduh Template Excel</button>
         <label class="flex-1 text-xs bg-sky-600 text-white py-2 rounded font-bold text-center cursor-pointer"><i class="fas fa-file-import mr-1"></i>Pilih File Excel<input type="file" id="bImpFile" accept=".xlsx,.xls,.csv" class="hidden" onchange="window.__sBulkFile(event)"></label>
       </div>
       <p class="text-[11px] text-gray-500 mb-1">Atau tempel langsung dari Excel di sini:</p>
-      <textarea id="bImp" rows="7" placeholder="No&#9;Nama&#9;NIS&#9;NISN&#9;Jenjang&#9;Jalur&#9;No WA&#9;Pembayaran Bulanan&#10;1&#9;Aisyah&#9;2026001&#9;0123456789&#9;SD&#9;Reguler&#9;6281234567890&#9;450000" class="w-full border rounded p-2 bg-gray-50 font-mono text-xs" data-testid="siswa-bulk-text"></textarea>
+      <textarea id="bImp" rows="7" placeholder="No&#9;Nama&#9;NIS&#9;NISN&#9;Jenjang&#9;Kelas&#9;Jalur&#9;No WA&#9;Pembayaran Bulanan&#10;1&#9;Aisyah&#9;2026001&#9;0123456789&#9;SD&#9;3A&#9;Reguler SD&#9;6281234567890&#9;450000" class="w-full border rounded p-2 bg-gray-50 font-mono text-xs" data-testid="siswa-bulk-text"></textarea>
       <div id="bImpPrev" class="mt-2 max-h-40 overflow-auto text-[11px] hidden"></div>
       <button onclick="window.__sBulkDo()" data-testid="siswa-bulk-import" class="w-full bg-utama text-white font-bold py-2 rounded-lg mt-2">Import ke Database</button>`));
       // live preview tabel
@@ -1197,16 +1225,15 @@ registerPage('siswa',{title:'Data Siswa',bgClass:'bg-white',
     };
     // Template TABEL (xlsx via SheetJS jika ada, fallback CSV)
     window.__sTemplate=()=>{
-      const hdr=['No','Nama','NIS','NISN','Jenjang','Jalur','No WA','Pembayaran Bulanan','Bayar Tahunan'];
+      const hdr=['No','Nama','NIS','NISN','Jenjang','Kelas','Jalur','No WA','Pembayaran Bulanan','Bayar Tahunan'];
       const rows=[hdr,
-        [1,'Contoh Siswa','2026001','0123456789','SD','Reguler','6281234567890',450000,5400000],
-        [2,'Contoh Yatim','2026002','0987654321','SMP','Yatim','6285678901234',300000,3600000]];
+        [1,'Contoh Siswa','2026001','0123456789','SD','3A','Reguler SD','6281234567890',450000,5400000],
+        [2,'Contoh Yatim','2026002','0987654321','SMP','7B','Yatim SMP','6285678901234',300000,3600000]];
       if(window.XLSX){
         const ws=XLSX.utils.aoa_to_sheet(rows); ws['!cols']=hdr.map(h=>({wch:Math.max(12,h.length+2)}));
         const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Siswa');
         XLSX.writeFile(wb,'template_siswa.xlsx'); return;
       }
-      // fallback CSV pakai TAB agar tetap terbuka rapi di Excel
       const tsv=rows.map(r=>r.join('\t')).join('\n');
       const a=document.createElement('a'); a.href='data:text/tab-separated-values;charset=utf-8,'+encodeURIComponent(tsv); a.download='template_siswa.tsv'; a.click();
     };
@@ -1234,6 +1261,8 @@ registerPage('siswa',{title:'Data Siswa',bgClass:'bg-white',
     };
     window.__sBulkDo=()=>{ const raw=$('#bImp').value.trim(); if(!raw){ toast('Tempel data dulu.','warn'); return; }
       const lines=raw.split(/\r?\n/).filter(l=>l.trim());
+      // FIX v13: konfirmasi sebelum kirim massal
+      if(!confirm('Import '+lines.length+' baris siswa ke database & Spreadsheet?\n\nBaris duplikat (NIS+Nama sama) otomatis dilewati.')) return;
       let ok=0, skip=0, dup=0;
       const existingKeys=new Set(state.siswa.map(s=>(String(s.nis||'').trim()+'|'+String(s.nama||'').toLowerCase().trim())));
       lines.forEach(l=>{
@@ -1241,26 +1270,30 @@ registerPage('siswa',{title:'Data Siswa',bgClass:'bg-white',
         if(/^(no|nama)[\t,;]/.test(lower)) return; // skip header
         const p=_splitRow(l).map(x=>String(x).trim());
         let cols=p;
-        // Buang kolom "No" jika baris diawali angka murni dan kolom >=7
-        if(cols.length>=7 && /^\d+$/.test(cols[0])) cols=cols.slice(1);
-        // Layout kolom: nama, nis, nisn, jenjang, jalur, no_wa, pembayaran_bulanan
-        const [nama,nis,nisn,jen,jalur,waOrPb,pbMaybe]=cols;
+        // Buang kolom "No" jika baris diawali angka murni dan kolom cukup banyak
+        if(cols.length>=8 && /^\d+$/.test(cols[0])) cols=cols.slice(1);
+        // FIX v13 (no.9): layout BARU dengan KELAS — nama, nis, nisn, jenjang, kelas, jalur, no_wa, pembayaran_bulanan
+        let nama='',nis='',nisn='',jen='',kelas='',jalur='',no_wa='',pb='';
+        if(cols.length>=8){
+          [nama,nis,nisn,jen,kelas,jalur,no_wa,pb]=cols;
+        } else if(cols.length===7){
+          // layout lama tanpa kelas: nama,nis,nisn,jenjang,jalur,no_wa,pb
+          [nama,nis,nisn,jen,jalur,no_wa,pb]=cols;
+        } else {
+          // minimal: nama,nis,nisn,jenjang,jalur,pb (tanpa wa)
+          [nama,nis,nisn,jen,jalur,pb]=cols;
+        }
         if(!nama){ skip++; return; }
-        // Backward-compat: kalau hanya 6 kolom (tanpa WA), kolom ke-6 = pembayaran_bulanan
-        let no_wa='', pb='';
-        if(cols.length>=7){ no_wa=String(waOrPb||'').replace(/[^\d+]/g,''); pb=pbMaybe; }
-        else { pb=waOrPb; }
+        no_wa=String(no_wa||'').replace(/[^\d+]/g,'');
         const pbNum=Number(String(pb||'').replace(/[^\d]/g,''))||0;
         const key=String(nis||'').trim()+'|'+String(nama||'').toLowerCase().trim();
-        // No.12: cegah double — kalau NIS+nama sudah ada, lewati
         if(existingKeys.has(key)){ dup++; return; }
         existingKeys.add(key);
-        const d={ id:uid(), nama, nis:nis||'', nisn:nisn||'', jenjang:JENJANG_LIST.includes(jen)?jen:'SD', kelas:'', jalur:JALUR_LIST.includes(jalur)?jalur:'Reguler', pembayaran_bulanan:pbNum, wali:'', no_wa, tahun_ajaran:taLabel(), status:'aktif', created_at:new Date().toISOString() };
+        const d={ id:uid(), nama, nis:nis||'', nisn:nisn||'', jenjang:JENJANG_LIST.includes(jen)?jen:'SD', kelas:kelas||'', jalur:(jalur||'').trim()||'Reguler', pembayaran_bulanan:pbNum, wali:'', no_wa, tahun_ajaran:taLabel(), status:'aktif', created_at:new Date().toISOString() };
         state.siswa.unshift(d); enqueue('siswa','upsert',d); ok++;
       });
       saveState(); closeModal(); window.__sR();
       toast(`✅ ${ok} siswa terimport.`+(skip?` ${skip} dilewati.`:'')+(dup?` ${dup} duplikat dilewati.`:''), ok?'success':'warn');
-      if(navigator.onLine && typeof flushQueue==='function') flushQueue(false).catch(()=>{});
     };
     window.__sR();
   }
@@ -1556,8 +1589,11 @@ registerPage('setor',{title:'Setor ke Bendahara',bgClass:'bg-white',
       if(n<=0){ toast('Nominal tidak valid.','warn'); return; }
       if(n>sal){ toast('Nominal melebihi saldo Anda.','warn'); return; }
       const adm=adminUser();
-      const t1={ id:uid(), tipe:'setor', tanggal:new Date().toISOString(), tahun_ajaran:taLabel(), metode:met, nominal:n, kategori:'Setor', keterangan:$('#seK').value.trim()||'Setor ke Bendahara', input_user_id:u.id, input_user_nama:u.nama, input_user_role:'guru', sumber:'transfer', created_at:new Date().toISOString() };
+      // FIX v13 (no.3): t1.sumber='tangan' supaya setor MENGURANGI saldo guru "di tangan".
+      // t2 (kas_in pada sumber 'bendahara') MENAMBAH saldo bendahara pada metode yang sama.
+      const t1={ id:uid(), tipe:'setor', tanggal:new Date().toISOString(), tahun_ajaran:taLabel(), metode:met, nominal:n, kategori:'Setor', keterangan:$('#seK').value.trim()||'Setor ke Bendahara', input_user_id:u.id, input_user_nama:u.nama, input_user_role:'guru', sumber:'tangan', created_at:new Date().toISOString() };
       const t2={ ...t1, id:uid(), tipe:'kas_in', kategori:'Setoran Guru', keterangan:'Terima setoran dari '+u.nama, input_user_id:adm.id, input_user_nama:adm.nama, input_user_role:'admin', sumber:'bendahara', ref_setor_id:t1.id };
+      if(!confirm('Konfirmasi setor '+fmtIDR(n)+' ('+(met==='cash'?'CASH':'TRANSFER')+') ke Bendahara?')) return;
       state.transaksi.unshift(t1,t2); saveState(); enqueue('transaksi','upsert',t1); enqueue('transaksi','upsert',t2);
       toast('✅ Setoran tercatat.','success'); $('#seN').value=''; $('#seK').value='';
       $('[data-testid="setor-saldo"]').textContent=fmtIDR(saldoUserDiTangan(u.id)); window.__seR();
@@ -2340,9 +2376,12 @@ registerPage('receipt',{title:'Bukti Pembayaran Infaq Syahriyah',bgClass:'bg-gra
         <button onclick="window.__rPr()" data-testid="resi-print" class="bg-slate-700 text-white font-bold py-3 rounded-lg"><i class="fas fa-print mr-1"></i>Cetak</button>
         <button onclick="window.__rDl()" data-testid="resi-download" class="bg-sky-600 text-white font-bold py-3 rounded-lg"><i class="fas fa-image mr-1"></i>Simpan Gambar</button>
         <button onclick="window.__rWA('${t.id}')" data-testid="resi-wa" class="col-span-2 bg-[#25D366] text-white font-bold py-3 rounded-lg"><i class="fab fa-whatsapp mr-1"></i>Kirim Foto Resi ke WhatsApp Wali</button>
+        <button onclick="navigate('spp')" data-testid="resi-back-bayar" class="col-span-2 bg-amber-500 text-white font-bold py-3 rounded-lg"><i class="fas fa-arrow-left mr-1"></i>Kembali ke Menu Bayar SPP</button>
       </div>
     </div>`; },
   mounted(params){ const t=state.transaksi.find(x=>x.id===params.id); if(!t) return; const s=state.siswa.find(x=>x.id===t.siswa_id)||{};
+    // FIX v13 (no.5): tombol kembali di header juga ke menu Bayar SPP (bukan dashboard)
+    try { const bb=document.getElementById('btnBack'); if(bb){ bb.onclick=()=>navigate('spp'); } } catch(_){}
     window.__rPr=()=>window.print();
     window.__rDl=async ()=>{ if(!window.html2canvas){ toast('Library belum siap.','warn'); return; } const c=await window.html2canvas($('#receiptCanvas'),{backgroundColor:'#fff',scale:2}); const a=document.createElement('a'); a.href=c.toDataURL('image/png'); a.download='Resi_'+(t.nama_siswa||'siswa')+'_'+new Date(t.tanggal).toISOString().slice(0,10)+'.png'; a.click(); toast('Disimpan.'); };
     // No.1: kirim foto resi LANGSUNG ke nomor WA wali yang tercantum (tanpa cari nomor manual)
