@@ -140,7 +140,8 @@ body{overflow:hidden;height:100vh}
 const BULAN_LIST=['Juli','Agustus','September','Oktober','November','Desember','Januari','Februari','Maret','April','Mei','Juni'];
 const BULAN_FULL=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const JENJANG_LIST=['TK','SD','SMP'];
-const JALUR_LIST=['Reguler','Yatim','Piatu','Yatim Piatu','Dhuafa','Tahfidz','Beasiswa'];
+const JALUR_LIST=['Bontot','Dhuafa TK','Dhuafa SD','Dhuafa SMP','Yatim TK','Yatim SD','Yatim SMP','Khusus','Reguler TK','Reguler SD','Reguler SMP'];
+function jalurOptions(){ const set=new Set(JALUR_LIST); (state.siswa||[]).forEach(s=>{ if(s&&s.jalur) set.add(String(s.jalur).trim()); }); return Array.from(set).filter(Boolean).sort(); }
 const APP_KEY='isa_state_v2', QUEUE_KEY='isa_queue_v2', SESSION_KEY='isa_session_v2';
 
 /* ===== UTIL ===== */
@@ -356,9 +357,28 @@ async function pullSpreadsheet(silent=false){
     }
     if(!j || !j.ok) throw new Error((j&&j.error)||'Gagal pull');
     // Replace data tabel-wise; jangan timpa gasUrl lokal
-    if(Array.isArray(j.Users)) state.users=j.Users.length?j.Users:state.users;
+    if(Array.isArray(j.Users)){
+      // FIX v12: MERGE users (jangan timpa) supaya password yang baru diubah lokal tapi belum sync
+      // tidak hilang. Aturan: server menang utk user yang sudah ada di server; user lokal yang
+      // belum ada di server dipertahankan.
+      const srvIds = new Set(j.Users.map(u=>String(u.id||'')));
+      const localOnly = state.users.filter(u=>!srvIds.has(String(u.id||'')));
+      state.users = j.Users.length ? j.Users.concat(localOnly) : state.users;
+    }
     if(Array.isArray(j.Siswa)) state.siswa=j.Siswa;
-    if(Array.isArray(j.Transaksi)) state.transaksi=j.Transaksi;
+    if(Array.isArray(j.Transaksi)) {
+      // FIX v12: defensif — pastikan setiap transaksi punya `tipe`.
+      // Row TransaksiSPP lama (sebelum kolom tipe ditambahkan) tidak punya field ini,
+      // sehingga semua filter t.tipe==='spp_in' gagal → nama siswa kosong & saldo kacau.
+      state.transaksi = j.Transaksi.map(t=>{
+        if(!t) return t;
+        if(!t.tipe){
+          if(t.siswa_id || t.nama_siswa || t.bulan_nominal) t.tipe='spp_in';
+          else if(Number(t.nominal||0) >= 0) t.tipe='kas_in';
+        }
+        return t;
+      });
+    }
     if(Array.isArray(j.Kategori)) state.kategori=j.Kategori;
     if(Array.isArray(j.TunggakanLalu)) state.tunggakanLalu=j.TunggakanLalu;
     if(Array.isArray(j.BukuHutang)) state.bukuHutang=j.BukuHutang;
@@ -388,7 +408,15 @@ window.addEventListener('offline',()=>{ $('#offlineBanner').classList.add('show'
 function prosesLogin(e){
   e.preventDefault();
   const u=$('#logUser').value.trim(), p=$('#logPass').value;
-  const user=state.users.find(x=>String(x.username||'').trim().toLowerCase()===u.toLowerCase() && String(x.password||'')===p && (x.aktif===true||x.aktif==='TRUE'||x.aktif==='true'||x.aktif===1||x.aktif==='1'||x.aktif===undefined||x.aktif===null||x.aktif===''));
+  // FIX v12: bandingkan sebagai string dan trim password sisi sheet (Sheets
+  // sering menambah whitespace / mengubah tipe number ↔ string).
+  const norm=v=>String(v==null?'':v).trim();
+  const user=state.users.find(x=>{
+    if(norm(x.username).toLowerCase()!==u.toLowerCase()) return false;
+    if(norm(x.password)!==norm(p)) return false;
+    const a=x.aktif;
+    return a===true||a==='TRUE'||a==='true'||a===1||a==='1'||a===undefined||a===null||a==='';
+  });
   if(!user){ toast('Username atau password salah.','error'); return; }
   session={id:user.id,username:user.username,nama:user.nama,role:user.role};
   saveSession(); enterApp();
@@ -457,10 +485,15 @@ function navigate(name,params={}){
   $('#pageContainer').innerHTML=`<div class="page-view active no-scrollbar absolute inset-0 ${PAGES[name].bgClass||'bg-latar'} p-4 md:p-6" data-testid="page-${name}">${PAGES[name].render(params)||''}</div>`;
   if(PAGES[name].mounted) PAGES[name].mounted(params);
   window.scrollTo(0,0);
+  try{ history.pushState({page:name},''); }catch(_){}
+
 }
 window.navigate=navigate;
 // No.10: konfirmasi sebelum keluar halaman aktif (kecuali sudah di home)
-window.goHome=()=>{ if(currentPage==='home'){ return; } if(!confirm('Yakin ingin keluar dari halaman ini?\n\nPerubahan yang belum disimpan akan hilang.')) return; navigate('home'); };
+window.goHome=()=>{ if(currentPage==='home') return; navigate('home'); };
+// Hardware back (Android / browser back) → konfirmasi keluar aplikasi hanya di home
+window.addEventListener('popstate',(ev)=>{ if(currentPage && currentPage!=='home'){ history.pushState({page:currentPage},''); navigate('home'); } else { if(confirm('Keluar dari aplikasi?')){ /* biarkan default back */ } else { history.pushState({page:'home'},''); } } });
+try{ history.replaceState({page:'home'},''); }catch(_){}
 
 /* ===== MODAL ===== */
 function modalBox(title,body){
@@ -639,6 +672,7 @@ registerPage('home',{
         ${mb('admin-jurnal-siswa','fa-receipt','Jurnal Harian Siswa')}
         ${mb('admin-jurnal-kas','fa-book-open','Buku Kas Harian')}
         ${mb('admin-laporan','fa-file-pdf','Laporan Bulanan')}
+        ${mb('admin-statistik-jalur','fa-chart-column','Statistik Jalur')}
         ${mb('admin-rekap-guru','fa-users-rectangle','Saldo Per Guru')}
         ${mb('setor','fa-paper-plane','Status Setoran')}
         ${mb('transfer-internal','fa-right-left','Tarik/Setor Transfer')}
@@ -677,18 +711,8 @@ registerPage('home',{
           <button class="bg-white text-red-700 hover:bg-red-50 text-xs font-bold py-2 px-4 rounded-full shadow"><i class="fas fa-search mr-1"></i>Lihat Detail</button>
         </div>
       </div>
-      ${(()=>{
-        const aktif=state.siswa.filter(s=>(s.status||'aktif')==='aktif');
-        const byJ={}; let totBln=0;
-        aktif.forEach(s=>{ const j=s.jalur||'Reguler'; const tarif=getSppTarif(s); byJ[j]=byJ[j]||{n:0,sum:0}; byJ[j].n++; byJ[j].sum+=tarif; totBln+=tarif; });
-        const jalurs=Object.keys(byJ).sort();
-        if(!aktif.length) return '';
-        return `<div class="bg-white rounded-2xl shadow p-4 mb-5 border border-gray-100">
-          <div class="flex items-center justify-between mb-2"><h3 class="font-bold text-gray-700 text-sm">📊 Statistik Pemasukan Bulanan per Jalur</h3><span class="text-xs text-gray-500">${aktif.length} santri aktif</span></div>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">${jalurs.map(j=>`<div class="bg-gray-50 rounded-lg p-2"><p class="text-[10px] uppercase font-bold text-gray-500">${esc(j)}</p><p class="text-sm font-extrabold text-gelap">${byJ[j].n} santri</p><p class="text-[11px] text-emerald-700 font-semibold">${fmtIDR(byJ[j].sum)}/bln</p></div>`).join('')}</div>
-          <div class="border-t pt-2 flex justify-between items-center text-sm"><span class="font-bold text-gray-700">Total Potensi/Bulan:</span><span class="font-extrabold text-utama">${fmtIDR(totBln)}</span></div>
-        </div>`;
-      })()}
+      ${''/* Statistik per Jalur dipindah ke menu Bendahara Pusat → 'admin-statistik-jalur' */}
+
       <h3 class="font-bold text-gray-600 mb-3 text-sm tracking-wide uppercase">Menu Utama</h3>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         ${mb('spp','fa-hand-holding-dollar','Bayar SPP','bg-white','text-blue-600 bg-blue-50')}
@@ -783,9 +807,22 @@ function renderSppPanel(id){
   const bulanBayarTahun = BULAN_LIST.filter(b=>!_free.has(b));
   const tagihanTahun = bulanBayarTahun.length * tarif;
   const sisa=Math.max(0,tagihanTahun-terbayar);
-  // No.5: tile per-bulan dengan input nominal editable. Bulan lunas = disabled centang. Bulan gratis = badge GRATIS & disabled.
+  // FIX v12: ambil nominal terakhir yang TERSIMPAN per bulan dari riwayat transaksi,
+  // supaya saat siswa dibuka lagi, angka yang muncul = angka terakhir yang benar-benar dibayar.
+  const __lastNom = {};         // bulan -> nominal terakhir
+  const __lastTrxOf = {};       // bulan -> id transaksi terakhir (untuk tombol "ubah")
+  sppTrxBySiswa(id).slice().sort((a,b)=> new Date(a.tanggal)-new Date(b.tanggal)).forEach(t=>{
+    const bm = (t.bulan_nominal && typeof t.bulan_nominal==='object') ? t.bulan_nominal : null;
+    const arr = Array.isArray(t.bulan)?t.bulan:(t.bulan?String(t.bulan).split(',').map(s=>s.trim()).filter(Boolean):[]);
+    arr.forEach(b=>{
+      __lastNom[b] = bm && bm[b]!=null ? Number(bm[b]) : (arr.length? Math.round(Number(t.nominal||0)/arr.length):Number(t.nominal||0));
+      __lastTrxOf[b] = t.id;
+    });
+  });
+  // No.5: tile per-bulan dengan input nominal editable. Bulan lunas → tampilkan nominal & tombol "Ubah".
   const grid=BULAN_LIST.map((b,i)=>{
     const paid=tb.has(b), free=_free.has(b);
+    const nomShown = __lastNom[b] != null ? __lastNom[b] : tarif;
     const stateCls = paid ? 'bg-emerald-100 border-emerald-400' : free ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-200';
     const badge = paid ? '<span class="text-[9px] bg-emerald-600 text-white px-1.5 rounded ml-1">LUNAS</span>' : free ? '<span class="text-[9px] bg-amber-500 text-white px-1.5 rounded ml-1">GRATIS</span>' : '';
     return `<div class="border rounded-lg p-2 ${stateCls}">
@@ -793,7 +830,11 @@ function renderSppPanel(id){
         <input type="checkbox" id="bln_${i}" value="${b}" data-bln="${b}" class="bulan-checkbox w-3.5 h-3.5" ${paid||free?'disabled':''} ${paid?'checked':''} onchange="window.__sppT()">
         <span>${b.slice(0,3)}</span>${badge}
       </label>
-      ${!paid && !free ? `<input type="text" data-bln-nom="${b}" data-rupiah inputmode="numeric" value="${fmtThousand(tarif)}" oninput="window.__sppT()" class="mt-1 w-full border bg-gray-50 rounded p-1 text-[11px] text-right font-semibold" title="Edit nominal bulan ${b}">` : '<p class="text-[10px] text-gray-400 mt-1 text-right">'+(free?'Rp 0':fmtIDR(tarif))+'</p>'}
+      ${!paid && !free
+        ? `<input type="text" data-bln-nom="${b}" data-rupiah inputmode="numeric" value="${fmtThousand(nomShown)}" oninput="window.__sppT()" class="mt-1 w-full border bg-gray-50 rounded p-1 text-[11px] text-right font-semibold" title="Edit nominal bulan ${b}">`
+        : paid
+          ? `<div class="mt-1 flex items-center gap-1"><span class="flex-1 text-[10px] text-emerald-700 font-bold text-right">${fmtIDR(nomShown)}</span><button type="button" onclick="window.__sppEditBln('${b}','${id}','${__lastTrxOf[b]||''}')" class="text-[9px] bg-emerald-600 text-white px-1.5 py-0.5 rounded" title="Ubah nominal bulan ${b}">Ubah</button></div>`
+          : '<p class="text-[10px] text-gray-400 mt-1 text-right">Rp 0</p>'}
     </div>`;
   }).join('');
   $('#sppP').classList.remove('hidden');
@@ -928,6 +969,53 @@ function renderSppPanel(id){
     // re-render panel siswa
     try { renderSppPanel(siswaId); } catch(_){ navigate('spp'); }
   };
+  // FIX v12 (no.1): UBAH nominal bulan yang sudah dibayar tanpa duplikat.
+  // Membatalkan transaksi lama lalu membuat transaksi baru dengan nominal baru.
+  window.__sppEditBln = (bulan, siswaId, trxId)=>{
+    const s = state.siswa.find(x=>x.id===siswaId); if(!s) return;
+    const old = state.transaksi.find(x=>x.id===trxId);
+    const oldNom = old && old.bulan_nominal && old.bulan_nominal[bulan]!=null ? Number(old.bulan_nominal[bulan]) : Number(old?.nominal||0);
+    const inp = prompt('Ubah nominal bulan '+bulan+' untuk '+s.nama+'\n\nNominal lama: '+fmtIDR(oldNom)+'\n\nMasukkan nominal BARU (angka, tanpa titik):', String(oldNom));
+    if(inp==null) return;
+    const newNom = Number(String(inp).replace(/[^\d]/g,''));
+    if(!(newNom>0)){ toast('Nominal tidak valid.','warn'); return; }
+    if(newNom===oldNom){ toast('Nominal sama, tidak ada perubahan.','info'); return; }
+    if(!confirm('Konfirmasi: ubah nominal '+bulan+' dari '+fmtIDR(oldNom)+' → '+fmtIDR(newNom)+' ?\n\nTransaksi lama akan DIBATALKAN dan diganti transaksi baru.\nSaldo otomatis disesuaikan.')) return;
+    // Jika trx lama HANYA berisi bulan ini → batalkan total.
+    // Jika berisi banyak bulan → batalkan total lalu re-input bulan-bulan lain dengan nominal sebelumnya, dan bulan ini dengan nominal baru.
+    if(old){
+      const arr = Array.isArray(old.bulan)?old.bulan.slice():(old.bulan?String(old.bulan).split(',').map(x=>x.trim()).filter(Boolean):[]);
+      const bm = (old.bulan_nominal && typeof old.bulan_nominal==='object') ? Object.assign({},old.bulan_nominal) : {};
+      // kalau bulan_nominal kosong, derivasi rata
+      arr.forEach(b=>{ if(bm[b]==null) bm[b] = Math.round(Number(old.nominal||0)/arr.length); });
+      // hapus transaksi lama (soft delete via enqueue)
+      state.transaksi = state.transaksi.filter(x=>x.id!==trxId);
+      enqueue('transaksi','delete',{id:trxId});
+      // bulan-bulan lain → buat ulang dengan nominal sebelumnya (kalau ada)
+      const others = arr.filter(b=>b!==bulan);
+      if(others.length){
+        const u=sess();
+        const newMap={}; others.forEach(b=> newMap[b]=Number(bm[b]||0));
+        const total = Object.values(newMap).reduce((s,v)=>s+v,0);
+        const trxKeep={ id:uid(), tipe:'spp_in', tanggal:old.tanggal||new Date().toISOString(), tahun_ajaran:old.tahun_ajaran||taLabel(), metode:old.metode||'cash',
+          siswa_id:s.id, nama_siswa:s.nama, nis:s.nis, nisn:s.nisn, jenjang:s.jenjang, kelas:s.kelas,
+          bulan:others, bulan_nominal:newMap, nominal:total, kategori:'SPP', keterangan:'SPP (otomatis dari edit) '+others.join(', '),
+          input_user_id:u.id, input_user_nama:u.nama, input_user_role:u.role,
+          sumber: u.role==='admin'?'bendahara':'tangan', created_at:new Date().toISOString() };
+        state.transaksi.unshift(trxKeep); enqueue('transaksi','upsert',trxKeep);
+      }
+    }
+    // Transaksi BARU untuk bulan yang diubah
+    const u=sess(); const trxNew={ id:uid(), tipe:'spp_in', tanggal:new Date().toISOString(), tahun_ajaran:taLabel(), metode:(old&&old.metode)||'cash',
+      siswa_id:s.id, nama_siswa:s.nama, nis:s.nis, nisn:s.nisn, jenjang:s.jenjang, kelas:s.kelas,
+      bulan:[bulan], bulan_nominal:{[bulan]:newNom}, nominal:newNom, kategori:'SPP',
+      keterangan:'Ubah nominal '+bulan+' menjadi '+fmtIDR(newNom),
+      input_user_id:u.id, input_user_nama:u.nama, input_user_role:u.role,
+      sumber: u.role==='admin'?'bendahara':'tangan', created_at:new Date().toISOString() };
+    state.transaksi.unshift(trxNew); saveState(); enqueue('transaksi','upsert',trxNew);
+    toast('✅ Nominal '+bulan+' diperbarui.','success');
+    try { renderSppPanel(siswaId); } catch(_){ navigate('spp'); }
+  };
   window.__sppT();
 }
 
@@ -1060,7 +1148,7 @@ registerPage('siswa',{title:'Data Siswa',bgClass:'bg-white',
             <div><label class="text-xs font-semibold">Kelas</label><input id="f_k" value="${esc(s.kelas||'')}" class="w-full border rounded p-2 bg-gray-50"></div>
           </div>
           <div class="grid grid-cols-2 gap-3">
-            <div><label class="text-xs font-semibold">Jalur *</label><select id="f_jl" class="w-full border rounded p-2 bg-gray-50">${JALUR_LIST.map(j=>`<option ${j===(s.jalur||'Reguler')?'selected':''}>${j}</option>`).join('')}</select></div>
+            <div><label class="text-xs font-semibold">Jalur *</label><input id="f_jl" list="dl_jalur" value="${esc(s.jalur||'Reguler SD')}" placeholder="Pilih atau ketik jalur" class="w-full border rounded p-2 bg-gray-50"><datalist id="dl_jalur">${jalurOptions().map(j=>`<option value="${esc(j)}"></option>`).join('')}</datalist></div>
             <div><label class="text-xs font-semibold">Pembayaran Bulanan (Rp) *</label><input id="f_pb" data-rupiah inputmode="numeric" value="${s.pembayaran_bulanan?fmtThousand(s.pembayaran_bulanan):''}" placeholder="contoh: 450.000" class="w-full border rounded p-2 bg-gray-50"></div>
           </div>
           <p class="text-[10px] text-gray-500 -mt-2">Jika kosong, sistem memakai tarif jenjang (${fmtIDR(tarifFallback)}).</p>
@@ -1076,7 +1164,7 @@ registerPage('siswa',{title:'Data Siswa',bgClass:'bg-white',
     };
     window.__sSave=(e,id)=>{ e.preventDefault();
       const pb=rupiahVal($('#f_pb'));
-      const d={ id:id||uid(), nis:$('#f_nis').value.trim(), nisn:$('#f_nisn').value.trim(), nama:$('#f_nama').value.trim(), jenjang:$('#f_j').value, kelas:$('#f_k').value.trim(), jalur:$('#f_jl').value, pembayaran_bulanan:pb, wali:$('#f_w').value.trim(), no_wa:$('#f_wa').value.trim(), tahun_ajaran:$('#f_t').value, status:$('#f_st').value, updated_at:new Date().toISOString() };
+      const d={ id:id||uid(), nis:$('#f_nis').value.trim(), nisn:$('#f_nisn').value.trim(), nama:$('#f_nama').value.trim(), jenjang:$('#f_j').value, kelas:$('#f_k').value.trim(), jalur:($('#f_jl').value||'').trim()||'Reguler SD', pembayaran_bulanan:pb, wali:$('#f_w').value.trim(), no_wa:$('#f_wa').value.trim(), tahun_ajaran:$('#f_t').value, status:$('#f_st').value, updated_at:new Date().toISOString() };
       if(!d.nama){ toast('Nama wajib diisi.','warn'); return; }
       if(id){ const i=state.siswa.findIndex(s=>s.id===id); if(i>=0) state.siswa[i]={...state.siswa[i], ...d}; }
       else { d.created_at=new Date().toISOString(); state.siswa.unshift(d); }
@@ -1785,6 +1873,84 @@ registerPage('admin-rekap-guru',{title:'Saldo Per Guru',bgClass:'bg-white',admin
     </div></div>`).join(''):'<p class="p-3 text-sm text-gray-400 text-center">Belum ada guru.</p>'}</div></div>`;
   }
 });
+
+/* ====== ADMIN: STATISTIK PEMASUKAN BULANAN PER JALUR ====== */
+registerPage('admin-statistik-jalur',{title:'Statistik Pemasukan per Jalur',bgClass:'bg-white',adminOnly:true,
+  render(){
+    const ta=taLabel();
+    const years=taYears(ta); // [tahunAwal, tahunAkhir]
+    const bulanUrut=['Juli','Agustus','September','Oktober','November','Desember','Januari','Februari','Maret','April','Mei','Juni'];
+    const siswaById={}; state.siswa.forEach(s=>{ siswaById[s.id]=s; });
+    // Kumpulkan jalur dari data aktual + master
+    const jalurSet=new Set(JALUR_LIST);
+    state.siswa.forEach(s=>{ if(s.jalur) jalurSet.add(String(s.jalur).trim()); });
+    const jalurs=Array.from(jalurSet).sort();
+    // matrix[jalur][bulan] = nominal
+    const M={}; jalurs.forEach(j=>{ M[j]={}; bulanUrut.forEach(b=>{ M[j][b]=0; }); });
+    const totalBulan={}; bulanUrut.forEach(b=>{ totalBulan[b]=0; });
+    const totalJalur={}; jalurs.forEach(j=>{ totalJalur[j]=0; });
+    let grand=0;
+    state.transaksi.filter(t=>t && t.tipe==='spp_in' && (t.tahun_ajaran||ta)===ta).forEach(t=>{
+      const s=siswaById[t.siswa_id]||{};
+      const j=(s.jalur||t.jalur||'Reguler SD').toString().trim();
+      if(!M[j]){ M[j]={}; bulanUrut.forEach(b=>{ M[j][b]=0; }); totalJalur[j]=0; jalurs.push(j); }
+      // pecah berdasarkan bulan_nominal jika ada, kalau tidak fallback ke nominal total / jumlah bulan
+      const bn=t.bulan_nominal||{};
+      const keys=Object.keys(bn);
+      if(keys.length){
+        keys.forEach(b=>{ const n=Number(bn[b]||0); if(!M[j][b] && M[j][b]!==0){ M[j][b]=0; } M[j][b]+=n; totalJalur[j]+=n; totalBulan[b]=(totalBulan[b]||0)+n; grand+=n; });
+      } else if(Array.isArray(t.bulan) && t.bulan.length){
+        const per=Number(t.nominal||0)/t.bulan.length;
+        t.bulan.forEach(b=>{ M[j][b]=(M[j][b]||0)+per; totalJalur[j]+=per; totalBulan[b]=(totalBulan[b]||0)+per; grand+=per; });
+      } else {
+        // tanpa info bulan → masukkan ke bulan transaksi
+        const dt=new Date(t.tanggal||t.created_at||Date.now());
+        const b=BULAN_FULL[dt.getMonth()];
+        M[j][b]=(M[j][b]||0)+Number(t.nominal||0);
+        totalJalur[j]+=Number(t.nominal||0);
+        totalBulan[b]=(totalBulan[b]||0)+Number(t.nominal||0);
+        grand+=Number(t.nominal||0);
+      }
+    });
+    // Group jalur by jenjang (dari nama jalur)
+    function jenj(j){ const u=j.toUpperCase(); if(u.includes('TK')) return 'TK'; if(u.includes('SMP')) return 'SMP'; if(u.includes('SD')) return 'SD'; return 'Lainnya'; }
+    const grup={TK:[],SD:[],SMP:[],Lainnya:[]};
+    jalurs.forEach(j=>{ grup[jenj(j)].push(j); });
+    function tabel(group){
+      const list=grup[group]; if(!list.length) return '';
+      const subT={}; bulanUrut.forEach(b=>{ subT[b]=0; }); let subG=0;
+      const rows=list.map(j=>{
+        let row=0;
+        const tds=bulanUrut.map(b=>{ const v=M[j][b]||0; subT[b]+=v; row+=v; return `<td class="px-2 py-1 text-right text-[11px]">${v?fmtIDR(v):'-'}</td>`; }).join('');
+        subG+=row;
+        return `<tr class="border-t"><td class="px-2 py-1 font-semibold text-[11px] whitespace-nowrap">${esc(j)}</td>${tds}<td class="px-2 py-1 text-right text-[11px] font-bold text-emerald-700">${fmtIDR(row)}</td></tr>`;
+      }).join('');
+      const subTds=bulanUrut.map(b=>`<td class="px-2 py-1 text-right text-[11px] font-bold bg-emerald-50">${subT[b]?fmtIDR(subT[b]):'-'}</td>`).join('');
+      return `<div class="mb-5">
+        <h3 class="font-bold text-gray-700 text-sm mb-2">📚 Jenjang ${group}</h3>
+        <div class="overflow-x-auto border rounded-lg">
+          <table class="min-w-full text-xs">
+            <thead class="bg-slate-800 text-white"><tr><th class="px-2 py-2 text-left">Jalur</th>${bulanUrut.map(b=>`<th class="px-2 py-2 text-right">${b.slice(0,3)}</th>`).join('')}<th class="px-2 py-2 text-right">Total</th></tr></thead>
+            <tbody>${rows}</tbody>
+            <tfoot><tr class="border-t-2"><td class="px-2 py-1 font-bold text-[11px] bg-emerald-50">Subtotal ${group}</td>${subTds}<td class="px-2 py-1 text-right text-[11px] font-extrabold bg-emerald-100 text-emerald-800">${fmtIDR(subG)}</td></tr></tfoot>
+          </table>
+        </div>
+      </div>`;
+    }
+    return `<div class="max-w-6xl mx-auto">
+      <div class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl p-4 mb-4 shadow">
+        <p class="text-xs uppercase tracking-wide text-emerald-100">Statistik Pemasukan SPP per Jalur</p>
+        <h2 class="text-2xl font-extrabold">${fmtIDR(grand)}</h2>
+        <p class="text-xs text-emerald-100">Tahun Ajaran ${esc(ta)} · ${state.transaksi.filter(t=>t.tipe==='spp_in'&&(t.tahun_ajaran||ta)===ta).length} transaksi</p>
+      </div>
+      ${tabel('TK')}${tabel('SD')}${tabel('SMP')}${tabel('Lainnya')}
+      <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-[11px] text-amber-800">
+        <i class="fas fa-info-circle mr-1"></i>Data dihitung dari transaksi <b>SPP Masuk</b> (TransaksiSPP) pada tahun ajaran berjalan, dikelompokkan otomatis berdasarkan jalur masing-masing santri. Jalur baru yang Anda ketik di form siswa akan muncul otomatis di sini.
+      </div>
+    </div>`;
+  }
+});
+
 
 /* ====== ADMIN: LAPORAN BULANAN ====== */
 registerPage('admin-laporan',{title:'Laporan Keuangan Bulanan',bgClass:'bg-white',adminOnly:true,
