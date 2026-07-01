@@ -48,8 +48,10 @@ body{overflow:hidden;height:100vh}
 .sync-dot.sync{background:#f59e0b;animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 #receiptCanvas{font-family:'Courier New','Roboto Mono',monospace;background:#fff;color:#000;width:380px;padding:14px 16px;margin:0 auto;font-size:12px;line-height:1.45}
-#receiptCanvas .grid2{display:grid;grid-template-columns:1fr 1fr;gap:2px 8px}
-#receiptCanvas .grid2 .cell{font-size:10px;display:flex;justify-content:space-between;border-bottom:1px dotted #ccc;padding:1px 0}
+#receiptCanvas .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 8px}
+#receiptCanvas .grid2 .cell{font-size:9.5px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px dotted #ccc;padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;height:16px}
+#receiptCanvas .grid2 .cell > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#receiptCanvas .grid2 .cell > span:last-child{flex-shrink:0;padding-left:4px}
 #receiptCanvas .r-logo{display:block;margin:0 auto 4px;max-width:60px;max-height:60px}
 #receiptCanvas .r-title{font-weight:800;text-align:center;font-size:14px;letter-spacing:.5px}
 #receiptCanvas .r-sub{text-align:center;font-size:11px}
@@ -67,12 +69,24 @@ body{overflow:hidden;height:100vh}
 .metode-tab.active{background:var(--utama);color:#fff}
 .skeleton{background:linear-gradient(90deg,#e5e7eb 25%,#f3f4f6 50%,#e5e7eb 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:.5rem}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* v18: Pull-to-refresh */
+#ptrIndicator{position:fixed;top:-60px;left:50%;transform:translateX(-50%);width:52px;height:52px;border-radius:50%;background:#fff;box-shadow:0 8px 24px -6px rgba(5,150,105,.35);display:flex;align-items:center;justify-content:center;z-index:70;transition:top .25s ease, transform .25s ease;pointer-events:none}
+#ptrIndicator.show{top:16px}
+#ptrIndicator .ring{width:28px;height:28px;border-radius:50%;border:3px solid #d1fae5;border-top-color:#059669;animation:ptrSpin .9s linear infinite}
+@keyframes ptrSpin{to{transform:rotate(360deg)}}
+#ptrIndicator .arrow{color:#059669;font-size:18px;transition:transform .2s}
+.spp-search-hero{background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);border:2px solid #10b981;border-radius:24px;padding:20px 18px;box-shadow:0 10px 30px -12px rgba(16,185,129,.35)}
+.spp-search-hero input{background:#fff;border:2px solid #10b981;box-shadow:0 4px 12px -4px rgba(16,185,129,.25)}
+.spp-search-hero input:focus{border-color:#059669;box-shadow:0 0 0 4px rgba(16,185,129,.15)}
+.dash-card-btn{cursor:pointer;transition:transform .15s, box-shadow .15s}
+.dash-card-btn:hover{transform:translateY(-2px)}
 </style>
 </head>
 <body class="bg-latar text-gray-800 h-screen flex flex-col">
 <noscript>Aktifkan JavaScript.</noscript>
 
 <div id="offlineBanner" class="offline-banner" data-testid="offline-banner"><i class="fas fa-wifi mr-1"></i>Mode Offline — perubahan akan disinkronkan otomatis saat online.</div>
+<div id="ptrIndicator" aria-hidden="true"><i class="arrow fas fa-arrow-down"></i></div>
 
 <div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] hidden toast-animate" data-testid="toast">
   <div id="toastContent" class="flex items-center px-4 py-3 rounded-lg shadow-2xl text-white font-medium text-sm">
@@ -119,7 +133,7 @@ body{overflow:hidden;height:100vh}
     </div>
   </div>
   <div class="flex items-center gap-2">
-    <button onclick="manualSync()" data-testid="btn-sync" title="Sinkronkan" class="bg-aksen/20 hover:bg-aksen/30 text-aksen w-9 h-9 rounded-full flex items-center justify-center transition"><i class="fas fa-cloud-arrow-up text-sm"></i></button>
+    <button onclick="navigate('log-sync')" data-testid="btn-sync" title="Log & Kontrol Sinkronisasi" class="bg-aksen/20 hover:bg-aksen/30 text-aksen w-9 h-9 rounded-full flex items-center justify-center transition"><i class="fas fa-list-check text-sm"></i></button>
     <button id="btnInstall" onclick="installPWA()" title="Pasang aplikasi" class="hidden bg-aksen text-gelap font-bold w-9 h-9 rounded-full items-center justify-center transition" data-testid="btn-install"><i class="fas fa-download text-sm"></i></button>
     <div class="text-right hidden sm:block">
       <p class="text-xs font-bold text-aksen" id="activeUserName">-</p>
@@ -290,6 +304,11 @@ function saveSession(){ localStorage.setItem(SESSION_KEY,JSON.stringify(session)
 
 /* ===== SYNC ===== */
 function enqueue(entity,op,payload){
+  // v18: peringatan bila offline — data tetap disimpan lokal untuk retry,
+  // tapi bendahara diingatkan agar catat manual di buku bila jaringan mati lama.
+  if(!navigator.onLine){
+    toast('⚠️ Tidak ada internet — data disimpan sementara di HP, WAJIB catat manual juga di buku.','warn');
+  }
   // ANTI-DOUBLE INPUT: jika sudah ada op pending untuk entity+id yang sama,
   // ganti op lama dengan yang baru (jangan tambah duplikat ke queue).
   const pid = payload && (payload.id || payload.op_id);
@@ -446,6 +465,54 @@ setInterval(()=>{ if(!__flushBusy && queue.some(q=>q.status==='pending')) flushQ
 // Pull sekarang hanya berjalan saat: login, manualSync, atau setelah push selesai.
 window.addEventListener('online',()=>{ $('#offlineBanner').classList.remove('show'); flushQueue(false); });
 window.addEventListener('offline',()=>{ $('#offlineBanner').classList.add('show'); setSyncDot('err'); });
+
+/* ===== v18: PULL-TO-REFRESH (touch + mouse) ===== */
+(function installPTR(){
+  const IND = ()=>document.getElementById('ptrIndicator');
+  const wrap = ()=>document.getElementById('pageContainer');
+  let startY=0, pulling=false, dist=0, active=false;
+  const THRESHOLD=80;
+  function onStart(y){
+    const w=wrap(); if(!w) return;
+    // hanya trigger jika scroll di atas
+    const active_view=w.querySelector('.page-view.active');
+    if(active_view && active_view.scrollTop>4) return;
+    pulling=true; startY=y; dist=0;
+  }
+  function onMove(y){
+    if(!pulling) return;
+    dist=Math.max(0,y-startY);
+    if(dist>10){
+      const ind=IND(); if(ind){ ind.classList.add('show'); ind.style.transform='translateX(-50%) translateY('+Math.min(dist*0.4,50)+'px) rotate('+(dist*2)+'deg)'; }
+    }
+  }
+  function onEnd(){
+    if(!pulling) return; pulling=false;
+    const ind=IND();
+    if(dist>THRESHOLD && !active){
+      if(confirm('🔄 Yakin ingin REFRESH tarik data dari Spreadsheet?\n\nSemua perubahan yang belum tersimpan bisa hilang / tertimpa.\nLanjut?')){
+        active=true;
+        if(ind){ ind.classList.add('show'); ind.style.transform='translateX(-50%)'; ind.innerHTML='<div class="ring"></div>'; }
+        pullSpreadsheet(false).finally(()=>{
+          active=false;
+          if(ind){ ind.classList.remove('show'); ind.innerHTML='<i class="arrow fas fa-arrow-down"></i>'; ind.style.transform='translateX(-50%)'; }
+          if(currentPage) navigate(currentPage);
+        });
+        return;
+      }
+    }
+    if(ind){ ind.classList.remove('show'); ind.style.transform='translateX(-50%)'; }
+    dist=0;
+  }
+  document.addEventListener('touchstart',(e)=>onStart(e.touches[0].clientY),{passive:true});
+  document.addEventListener('touchmove',(e)=>onMove(e.touches[0].clientY),{passive:true});
+  document.addEventListener('touchend',onEnd,{passive:true});
+  // desktop drag: pakai pointer di header/area atas
+  let mDown=false;
+  document.addEventListener('mousedown',(e)=>{ if(e.clientY<160){ mDown=true; onStart(e.clientY); } });
+  document.addEventListener('mousemove',(e)=>{ if(mDown) onMove(e.clientY); });
+  document.addEventListener('mouseup',()=>{ if(mDown){ mDown=false; onEnd(); } });
+})();
 
 /* ===== AUTH ===== */
 function prosesLogin(e){
@@ -679,15 +746,28 @@ function saldoUserDiTangan(userId){
 }
 function totalSekolah(){ return saldoBendaharaCash()+saldoBendaharaTransfer(); }
 function adminUser(){ return state.users.find(u=>u.role==='admin') || { id:'u_admin', nama:'Bendahara Pusat' }; }
+/* v18: total saldo guru (dana yg masih di tangan semua guru) */
+function saldoGuruTotal(){
+  return state.users.filter(u=>u.role==='guru').reduce((s,u)=>s+Math.max(0,saldoUserDiTangan(u.id)),0);
+}
+function totalSaldoAll(){ return saldoBendaharaCash()+saldoBendaharaTransfer()+saldoGuruTotal(); }
+/* v18: total tunggakan (untuk baris ringkasan di dashboard pusat) */
+function totalTunggakanAll(){
+  let tot=0, jml=0;
+  state.siswa.filter(s=>(s.status||'aktif')==='aktif').forEach(s=>{ const c=hitungTunggakan(s); if(c.total>0){ tot+=c.total; jml++; } });
+  return {tot,jml};
+}
 
-/* ===== BUKU HUTANG: KHUSUS kategori "Hutang Operasional" (pinjam) & "Bayar Hutang" (bayar) =====
-   Kas masuk/keluar dengan kategori lain TIDAK ikut dicatat di Buku Hutang. */
+/* ===== BUKU HUTANG (v18 balik):
+   Kas MASUK  → kategori "Hutang Operasional" = MENERIMA pinjaman (nambah hutang).
+   Kas KELUAR → kategori "Bayar Hutang"       = MELUNASI hutang.
+   Kategori lain TIDAK dicatat di Buku Hutang. */
 function rekapHutang(){
   const entries=[];
   state.transaksi.forEach(t=>{
-    if(t.tipe==='kas_out' && t.kategori==='Hutang Operasional'){
+    if(t.tipe==='kas_in' && t.kategori==='Hutang Operasional'){
       entries.push({ id:'t_'+t.id, tanggal:t.tanggal, keterangan:'(Pinjam) '+(t.keterangan||'-'), jumlah_pinjam:Number(t.nominal||0), jumlah_bayar:0, input_user_nama:t.input_user_nama||'-', source:'kas' });
-    } else if(t.tipe==='kas_in' && t.kategori==='Bayar Hutang'){
+    } else if(t.tipe==='kas_out' && t.kategori==='Bayar Hutang'){
       entries.push({ id:'t_'+t.id, tanggal:t.tanggal, keterangan:'(Bayar) '+(t.keterangan||'-'), jumlah_pinjam:0, jumlah_bayar:Number(t.nominal||0), input_user_nama:t.input_user_nama||'-', source:'kas' });
     }
   });
@@ -706,8 +786,8 @@ function rekapHutang(){
 function ensureHutangKategori(){
   const has=(n,t)=>state.kategori.some(k=>k.nama===n&&k.tipe===t);
   let changed=false;
-  if(!has('Hutang Operasional','out')){ const k={id:uid(),nama:'Hutang Operasional',tipe:'out',created_at:todayISO()}; state.kategori.push(k); enqueue('kategori','upsert',k); changed=true; }
-  if(!has('Bayar Hutang','in')){ const k={id:uid(),nama:'Bayar Hutang',tipe:'in',created_at:todayISO()}; state.kategori.push(k); enqueue('kategori','upsert',k); changed=true; }
+  if(!has('Hutang Operasional','in')){ const k={id:uid(),nama:'Hutang Operasional',tipe:'in',created_at:todayISO()}; state.kategori.push(k); enqueue('kategori','upsert',k); changed=true; }
+  if(!has('Bayar Hutang','out')){ const k={id:uid(),nama:'Bayar Hutang',tipe:'out',created_at:todayISO()}; state.kategori.push(k); enqueue('kategori','upsert',k); changed=true; }
   if(changed) saveState();
 }
 
@@ -753,33 +833,47 @@ registerPage('home',{
         ${mb('pengaturan','fa-gear','Pengaturan')}
       </div>`;
     return `
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div class="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl shadow-xl p-5 text-white">
-          <p class="text-xs text-emerald-100 mb-1 uppercase tracking-wide">${admin?'Saldo Bendahara Pusat':'Saldo di Tangan'}</p>
-          <h2 class="text-3xl font-extrabold tracking-tight" data-testid="dash-saldo">${fmtIDR(total)}</h2>
-          ${admin?`<div class="grid grid-cols-2 gap-2 mt-2 text-xs">
-            <div class="bg-white/15 rounded-lg p-2"><p class="text-emerald-100">💵 Cash</p><p class="font-bold" data-testid="saldo-cash">${fmtIDR(cash)}</p></div>
-            <div class="bg-white/15 rounded-lg p-2"><p class="text-emerald-100">🏦 Transfer</p><p class="font-bold" data-testid="saldo-transfer">${fmtIDR(transfer)}</p></div>
-          </div>
-          <div class="bg-white/20 rounded-lg p-2.5 mt-2 flex items-center justify-between" data-testid="card-pendapatan-hari">
-            <div>
-              <p class="text-[10px] text-emerald-100 uppercase tracking-wide">📅 Pendapatan Hari Ini · ${new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}</p>
-              <p class="text-lg font-extrabold leading-tight">${fmtIDR(pendHariIni)}</p>
-            </div>
-            <span class="bg-white text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-full">${pendHariIniCnt} trx</span>
-          </div>`:''}
-          <div class="flex flex-wrap gap-2 mt-3">
-            ${!admin?`<button data-testid="btn-setor" onclick="navigate('setor')" class="bg-white text-emerald-700 hover:bg-emerald-50 text-xs font-bold py-2 px-4 rounded-full shadow"><i class="fas fa-paper-plane mr-1"></i>Setor ke Bendahara</button>`:''}
-            <button onclick="navigate('rekap')" class="bg-white/15 hover:bg-white/25 text-white text-xs font-bold py-2 px-4 rounded-full"><i class="fas fa-chart-pie mr-1"></i>Rekap Kas</button>
-          </div>
+      ${admin ? (()=>{ const guruSal=saldoGuruTotal(); const totAll=cash+transfer+guruSal; const tgg=totalTunggakanAll(); return `
+      <div class="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl shadow-xl p-5 text-white mb-4">
+        <p class="text-xs text-emerald-100 mb-1 uppercase tracking-wide">Total Saldo · Bendahara Pusat</p>
+        <h2 class="text-3xl font-extrabold tracking-tight" data-testid="dash-saldo">${fmtIDR(totAll)}</h2>
+        <p class="text-[11px] text-emerald-100 mb-3">Saldo Tunai + Saldo Bank + Saldo Guru</p>
+        <div class="grid grid-cols-3 gap-2 text-xs">
+          <button type="button" onclick="navigate('rekap')" data-testid="card-tunai" class="dash-card-btn bg-white/15 hover:bg-white/25 rounded-lg p-2 text-left"><p class="text-emerald-100">💵 Saldo Tunai</p><p class="font-bold text-sm" data-testid="saldo-cash">${fmtIDR(cash)}</p></button>
+          <button type="button" onclick="navigate('rekap')" data-testid="card-bank" class="dash-card-btn bg-white/15 hover:bg-white/25 rounded-lg p-2 text-left"><p class="text-emerald-100">🏦 Saldo Bank</p><p class="font-bold text-sm" data-testid="saldo-transfer">${fmtIDR(transfer)}</p></button>
+          <button type="button" onclick="navigate('admin-rekap-guru')" data-testid="card-guru" class="dash-card-btn bg-white/15 hover:bg-white/25 rounded-lg p-2 text-left"><p class="text-emerald-100">👨‍🏫 Saldo Guru</p><p class="font-bold text-sm">${fmtIDR(guruSal)}</p></button>
         </div>
-        <div class="bg-gradient-to-br from-rose-500 to-red-700 rounded-2xl shadow-xl p-5 text-white cursor-pointer" onclick="navigate('tunggakan')" data-testid="card-tunggakan">
-          <p class="text-xs text-rose-100 mb-1 uppercase tracking-wide">Total Tunggakan Santri</p>
-          <h2 class="text-3xl font-extrabold mb-1 tracking-tight">${fmtIDR(totalTg)}</h2>
-          <p class="text-xs text-rose-100 mb-3"><b>${jml}</b> santri menunggak · TA ${taLabel()}</p>
-          <button class="bg-white text-red-700 hover:bg-red-50 text-xs font-bold py-2 px-4 rounded-full shadow"><i class="fas fa-search mr-1"></i>Lihat Detail</button>
+        <div class="grid grid-cols-2 gap-2 mt-2 text-xs">
+          <button type="button" onclick="window.__dashCashList()" data-testid="btn-cash-list" class="dash-card-btn bg-white/10 hover:bg-white/20 rounded-lg p-2 text-left"><p class="text-emerald-100">👥 Siswa Bayar CASH (hari ini)</p><p class="font-bold">Ketuk untuk lihat</p></button>
+          <button type="button" onclick="window.__dashTfList()" data-testid="btn-tf-list" class="dash-card-btn bg-white/10 hover:bg-white/20 rounded-lg p-2 text-left"><p class="text-emerald-100">👥 Siswa Bayar TRANSFER (hari ini)</p><p class="font-bold">Ketuk untuk lihat</p></button>
         </div>
-      </div>
+        <button type="button" onclick="window.__dashJurnalHariIni()" class="dash-card-btn w-full bg-white/20 hover:bg-white/30 rounded-lg p-2.5 mt-2 flex items-center justify-between text-left" data-testid="card-pendapatan-hari">
+          <div>
+            <p class="text-[10px] text-emerald-100 uppercase tracking-wide">📅 Pendapatan Hari Ini · ${new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}</p>
+            <p class="text-lg font-extrabold leading-tight">${fmtIDR(pendHariIni)}</p>
+          </div>
+          <span class="bg-white text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-full">${pendHariIniCnt} trx</span>
+        </button>
+        <button type="button" onclick="navigate('tunggakan')" class="w-full mt-2 bg-rose-600/90 hover:bg-rose-700 rounded-lg p-2.5 flex items-center justify-between text-left text-white" data-testid="card-tunggakan">
+          <div>
+            <p class="text-[10px] text-rose-100 uppercase tracking-wide">⚠️ Tunggakan Santri (aktif)</p>
+            <p class="text-lg font-extrabold leading-tight">${fmtIDR(tgg.tot)}</p>
+          </div>
+          <span class="bg-white text-rose-700 text-[10px] font-bold px-2 py-1 rounded-full">${tgg.jml} siswa</span>
+        </button>
+        <div class="flex flex-wrap gap-2 mt-3">
+          <button onclick="navigate('rekap')" class="bg-white/15 hover:bg-white/25 text-white text-xs font-bold py-2 px-4 rounded-full"><i class="fas fa-chart-pie mr-1"></i>Rekap Kas</button>
+          <button onclick="navigate('transfer-internal')" class="bg-white/15 hover:bg-white/25 text-white text-xs font-bold py-2 px-4 rounded-full"><i class="fas fa-right-left mr-1"></i>Pindah Tunai↔Bank</button>
+        </div>
+      </div>`; })() : `
+      <div class="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl shadow-xl p-5 text-white mb-4">
+        <p class="text-xs text-emerald-100 mb-1 uppercase tracking-wide">Saldo di Tangan</p>
+        <h2 class="text-3xl font-extrabold tracking-tight" data-testid="dash-saldo">${fmtIDR(total)}</h2>
+        <div class="flex flex-wrap gap-2 mt-3">
+          <button data-testid="btn-setor" onclick="navigate('setor')" class="bg-white text-emerald-700 hover:bg-emerald-50 text-xs font-bold py-2 px-4 rounded-full shadow"><i class="fas fa-paper-plane mr-1"></i>Setor ke Bendahara</button>
+          <button onclick="navigate('rekap')" class="bg-white/15 hover:bg-white/25 text-white text-xs font-bold py-2 px-4 rounded-full"><i class="fas fa-chart-pie mr-1"></i>Rekap Kas</button>
+        </div>
+      </div>`}
       ${''/* Statistik per Jalur dipindah ke menu Bendahara Pusat → 'admin-statistik-jalur' */}
 
       <h3 class="font-bold text-gray-600 mb-3 text-sm tracking-wide uppercase">Menu Utama</h3>
@@ -800,7 +894,34 @@ function mb(page,icon,label,btn='bg-slate-800 text-white',ic='text-aksen bg-whit
   </button>`;
 }
 
+/* v18: modal dashboard — daftar siswa Cash / Transfer / Jurnal hari ini */
+(function(){
+  function daftarSiswaByMetode(metode){
+    const _todayIso = new Date().toISOString().slice(0,10);
+    return state.transaksi.filter(t=>t.tipe==='spp_in' && (t.tanggal||'').slice(0,10)===_todayIso && (t.metode||'cash')===metode);
+  }
+  function tabelSiswa(rows,label){
+    if(!rows.length) return '<p class="p-4 text-sm text-gray-400 text-center">Belum ada pembayaran '+label+' hari ini.</p>';
+    return '<div class="overflow-x-auto"><table class="w-full text-xs"><thead class="bg-emerald-50 text-emerald-800"><tr><th class="p-2 text-left">No</th><th class="p-2 text-left">NIS</th><th class="p-2 text-left">NISN</th><th class="p-2 text-left">Nama</th><th class="p-2 text-right">Jumlah</th><th class="p-2 text-left">Ket</th></tr></thead><tbody>'+
+      rows.map((t,i)=>`<tr class="border-t"><td class="p-2">${i+1}</td><td class="p-2">${esc(t.nis||'-')}</td><td class="p-2">${esc(t.nisn||'-')}</td><td class="p-2 font-semibold">${esc(t.nama_siswa||'-')}</td><td class="p-2 text-right font-bold text-emerald-700">${fmtIDR(t.nominal)}</td><td class="p-2 text-[10px] text-gray-500">${esc(Array.isArray(t.bulan)?t.bulan.join(', '):(t.bulan||t.keterangan||'-'))}</td></tr>`).join('')+
+      `<tr class="bg-emerald-50 font-bold"><td colspan="4" class="p-2 text-right">Total ${label}</td><td class="p-2 text-right text-emerald-700">${fmtIDR(rows.reduce((s,t)=>s+Number(t.nominal||0),0))}</td><td></td></tr></tbody></table></div>`;
+  }
+  window.__dashCashList=()=>{ const rows=daftarSiswaByMetode('cash'); openModal(modalBox('Siswa Bayar CASH — Hari Ini', tabelSiswa(rows,'CASH'))); };
+  window.__dashTfList=()=>{ const rows=daftarSiswaByMetode('transfer'); openModal(modalBox('Siswa Bayar TRANSFER — Hari Ini', tabelSiswa(rows,'TRANSFER'))); };
+  window.__dashTabungList=()=>{ const rows=daftarSiswaByMetode('tabungan'); openModal(modalBox('Siswa Bayar TABUNGAN — Hari Ini', tabelSiswa(rows,'TABUNGAN'))); };
+  window.__dashJurnalHariIni=()=>{
+    const _todayIso = new Date().toISOString().slice(0,10);
+    const rows=state.transaksi.filter(t=>['spp_in','kas_in'].includes(t.tipe) && (t.tanggal||'').slice(0,10)===_todayIso);
+    openModal(modalBox('Jurnal Pemasukan Hari Ini', rows.length?
+      '<div class="divide-y">'+rows.map(t=>`<div class="p-2 flex justify-between text-xs"><div><b>${esc(t.nama_siswa||t.kategori||'-')}</b><br><span class="text-gray-500">${(t.metode||'cash').toUpperCase()} · ${esc(t.keterangan||'-')}</span></div><span class="font-bold text-emerald-700">${fmtIDR(t.nominal)}</span></div>`).join('')+'</div>'
+      : '<p class="p-4 text-sm text-gray-400 text-center">Belum ada pemasukan hari ini.</p>'));
+  };
+})();
+
 window.__ISA__={state,queue,session,registerPage,navigate,toast,uid,esc,fmtIDR,fmtDate,fmtDateTime,modalBox,openModal,closeModal,saveState,saveQueue,enqueue,hitungTunggakan,getSppTarif,tarifJenjang,bulanTerbayar,sppTrxBySiswa,tunggakanLaluSiswa,tunggakanLaluTotal,normalizeWA,bulanWajibInTA,bulanWajibSampai,saldoBendaharaCash,saldoBendaharaTransfer,saldoUserDiTangan,totalSekolah,adminUser,rekapHutang,ensureHutangKategori,taLabel,pullSpreadsheet,pushSnapshot,flushQueue,BULAN_LIST,BULAN_FULL,JENJANG_LIST,JALUR_LIST,$,$$ ,isAdmin,inTA,taYears,attachRupiahMask,bindAllRupiah,rupiahVal,fmtThousand,onlyDigits,bulanGratisFor,bulanTerbayarRp,statusBulan,jalurOptions,findSiswaById,normalizeAllSiswa,normalizeSiswaRecord};
+window.__ISA__.saldoGuruTotal=saldoGuruTotal;
+window.__ISA__.totalSaldoAll=totalSaldoAll;
+window.__ISA__.totalTunggakanAll=totalTunggakanAll;
 
 /* ===== BOOT ===== */
 function boot(){
@@ -837,9 +958,13 @@ const alm=()=>state.settings.alamatSekolah||"";
 registerPage('spp',{title:'Bayar SPP',bgClass:'bg-white',
   render(){ return `
     <div class="max-w-3xl mx-auto">
-      <div class="relative mb-3">
-        <i class="fas fa-search absolute left-4 top-3.5 text-gray-400"></i>
-        <input id="sppC" type="text" data-testid="spp-search" oninput="window.__sppS(this.value)" class="w-full bg-gray-50 border border-gray-200 rounded-full pl-12 pr-4 py-3 focus:bg-white focus:border-utama focus:ring-2 focus:ring-green-100 outline-none transition" placeholder="Cari Nama Siswa / NIS / NISN…" />
+      <div class="spp-search-hero mb-4 max-w-md mx-auto">
+        <p class="text-center text-emerald-800 font-extrabold text-sm mb-2 tracking-wide"><i class="fas fa-hand-holding-dollar mr-1"></i>CARI SANTRI UNTUK BAYAR SPP</p>
+        <div class="relative">
+          <i class="fas fa-search absolute left-4 top-4 text-emerald-600"></i>
+          <input id="sppC" type="text" data-testid="spp-search" oninput="window.__sppS(this.value)" class="w-full rounded-full pl-12 pr-4 py-3.5 text-sm font-semibold text-emerald-900 outline-none transition" placeholder="Ketik Nama / NIS / NISN…" />
+        </div>
+        <p class="text-center text-[10px] text-emerald-700 mt-2">Ketuk hasil pencarian untuk membuka detail pembayaran</p>
       </div>
       <div id="sppH" class="mb-4 max-h-52 overflow-y-auto border border-gray-100 rounded-xl hidden divide-y bg-white shadow-sm"></div>
       <div id="sppP" class="hidden"></div>
@@ -955,7 +1080,9 @@ function renderSppPanel(id){
       <div class="inline-flex bg-gray-100 rounded-full p-1 text-xs">
         <button type="button" data-testid="spp-cash" onclick="window.__sppM('cash')" id="mC" class="metode-tab active px-3 py-1.5 rounded-full font-semibold">💵 Cash</button>
         <button type="button" data-testid="spp-transfer" onclick="window.__sppM('transfer')" id="mT" class="metode-tab px-3 py-1.5 rounded-full font-semibold text-gray-600">🏦 Transfer</button>
+        <button type="button" data-testid="spp-tabungan" onclick="window.__sppM('tabungan')" id="mTab" class="metode-tab px-3 py-1.5 rounded-full font-semibold text-gray-600">💰 Tabungan</button>
       </div>
+      <div id="sppGuruWrap" class="mt-2 hidden"><label class="text-xs font-semibold text-gray-700">Nama Guru Penanggung Jawab Tabungan *</label><input id="sppGuruPJ" type="text" placeholder="Ketik nama guru (manual)" class="w-full border rounded-lg p-2 bg-amber-50 border-amber-300"></div>
     </div>
     <form onsubmit="window.__sppOK(event)">
       <div id="mCk" class="mb-4"><p class="text-xs text-gray-500 mb-2">Tagihan default: <strong>${fmtIDR(tarif)}</strong>/bulan · <span class="text-amber-700">Nominal tiap bulan bisa di-edit langsung di kotak bulannya.</span></p><div class="grid grid-cols-3 sm:grid-cols-4 gap-2">${grid}</div></div>
@@ -979,7 +1106,7 @@ function renderSppPanel(id){
     $('#tabMn').classList.add(m==='manual'?'text-utama':'text-gray-400', m==='manual'?'border-utama':'border-transparent');
     window.__sppT();
   };
-  window.__sppM=(m)=>{ window.__sppMet=m; $('#mC').classList.toggle('active',m==='cash'); $('#mT').classList.toggle('active',m==='transfer'); };
+  window.__sppM=(m)=>{ window.__sppMet=m; $('#mC').classList.toggle('active',m==='cash'); $('#mT').classList.toggle('active',m==='transfer'); const mTab=$('#mTab'); if(mTab) mTab.classList.toggle('active',m==='tabungan'); const gw=$('#sppGuruWrap'); if(gw) gw.classList.toggle('hidden', m!=='tabungan'); };
   // No.5: hitung total dengan menjumlahkan nominal per-bulan (yang bisa diedit). Bulan yang tidak ada inputnya pakai tarif.
   function __sppPerBulanMap(){
     const m={};
@@ -1055,6 +1182,11 @@ function renderSppPanel(id){
       bulan, bulan_nominal:bulanMap, nominal, kategori:'SPP', keterangan:ket,
       input_user_id:u.id, input_user_nama:u.nama, input_user_role:u.role,
       sumber: u.role==='admin'?'bendahara':'tangan', created_at:new Date().toISOString() };
+    if(window.__sppMet==='tabungan'){
+      const gpj=($('#sppGuruPJ')&&$('#sppGuruPJ').value||'').trim();
+      if(!gpj){ toast('Isi nama guru penanggung jawab tabungan.','warn'); if(submitBtn){ submitBtn.dataset.busy=''; submitBtn.disabled=false; submitBtn.innerHTML='<i class="fas fa-floppy-disk mr-2"></i>Simpan & Cetak Resi'; } return; }
+      trx.guru_pj=gpj; trx.keterangan=(ket||'')+' · Tabungan (PJ: '+gpj+')';
+    }
     state.transaksi.unshift(trx); saveState(); enqueue('transaksi','upsert',trx);
     toast('✅ Pembayaran tersimpan.','success'); setTimeout(()=>navigate('receipt',{id:trx.id}),400);
   };
@@ -1154,8 +1286,8 @@ registerPage('kas',{title:'Kas Masuk / Keluar',bgClass:'bg-white',
     window.__kT=(m)=>{ window.__kasMode=m; ['kTi','kTo'].forEach(i=>{ const e=$('#'+i); e.classList.remove('text-utama','border-utama','text-gray-400','border-transparent'); });
       $('#kTi').classList.add(m==='in'?'text-utama':'text-gray-400', m==='in'?'border-utama':'border-transparent');
       $('#kTo').classList.add(m==='out'?'text-utama':'text-gray-400', m==='out'?'border-utama':'border-transparent');
-      // No.11: kategori bawaan disuntik tanpa disimpan ke DB (tidak memicu sync).
-      const __builtIn = m==='in' ? [{nama:'Bayar Hutang'}] : [{nama:'Hutang Operasional'}];
+      // v18: BALIK analogi — Kas Masuk "Hutang Operasional" = terima pinjaman; Kas Keluar "Bayar Hutang" = melunasi.
+      const __builtIn = m==='in' ? [{nama:'Hutang Operasional'}] : [{nama:'Bayar Hutang'}];
       const __exist = state.kategori.filter(k=>k.tipe===m);
       const __merged = [...__builtIn.filter(b=>!__exist.some(e=>e.nama===b.nama)), ...__exist];
       $('#kK').innerHTML = __merged.map(k=>`<option value="${esc(k.nama)}">${esc(k.nama)}</option>`).join('')||'<option value="">(tambah kategori dulu)</option>';
@@ -1179,7 +1311,7 @@ registerPage('kas',{title:'Kas Masuk / Keluar',bgClass:'bg-white',
         input_user_id:u.id, input_user_nama:u.nama, input_user_role:u.role,
         sumber: u.role==='admin'?'bendahara':'tangan', created_at:new Date().toISOString() };
       state.transaksi.unshift(trx); saveState(); enqueue('transaksi','upsert',trx);
-      const noteHutang = (m==='out'&&kat==='Hutang Operasional')?' (Tercatat sebagai pinjam di Buku Hutang)':((m==='in'&&kat==='Bayar Hutang')?' (Tercatat sebagai bayar di Buku Hutang)':'');
+      const noteHutang = (m==='in'&&kat==='Hutang Operasional')?' (Tercatat sebagai PINJAMAN BARU di Buku Hutang)':((m==='out'&&kat==='Bayar Hutang')?' (Tercatat sebagai PELUNASAN di Buku Hutang)':'');
       toast('✅ Catatan kas tersimpan.'+noteHutang,'success');
       $('#kN').value=''; $('#kK2').value=''; $('#kT').value=new Date().toISOString().slice(0,10);
       window.__kR();
@@ -1401,14 +1533,23 @@ registerPage('rekap',{title:'Rekap Kas',bgClass:'bg-white',
         <select id="rY" onchange="window.__rR()" class="border bg-gray-50 rounded-lg p-2.5">${[now.getFullYear()-1,now.getFullYear(),now.getFullYear()+1].map(y=>`<option ${y===now.getFullYear()?'selected':''}>${y}</option>`).join('')}</select>
         <select id="rT" onchange="window.__rR()" class="border bg-gray-50 rounded-lg p-2.5"><option value="">Semua TA</option>${(state.settings.tahunAjaranList||[taLabel()]).map(t=>`<option ${t===taLabel()?'selected':''}>${t}</option>`).join('')}</select>
       </div>
+      <div class="flex gap-1 mb-3 bg-gray-100 p-1 rounded-full text-xs" data-testid="rekap-filter">
+        <button type="button" onclick="window.__rMet('')" id="rmAll" class="flex-1 py-1.5 rounded-full font-bold bg-white text-emerald-700 shadow">Semua</button>
+        <button type="button" onclick="window.__rMet('cash')" id="rmCash" class="flex-1 py-1.5 rounded-full font-bold text-gray-500">💵 Cash</button>
+        <button type="button" onclick="window.__rMet('transfer')" id="rmTf" class="flex-1 py-1.5 rounded-full font-bold text-gray-500">🏦 Transfer</button>
+        <button type="button" onclick="window.__rMet('tabungan')" id="rmTab" class="flex-1 py-1.5 rounded-full font-bold text-gray-500">💰 Tabungan</button>
+      </div>
       <div id="rS" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3"></div>
       <button onclick="window.__rPDF()" data-testid="rekap-pdf" class="w-full bg-rose-600 text-white text-sm font-bold py-2 rounded-lg mb-3"><i class="fas fa-file-pdf mr-1"></i>Unduh PDF Detail</button>
       <div id="rL" class="divide-y border rounded-xl bg-white max-h-[55vh] overflow-y-auto"></div>
     </div>`; },
   mounted(){
+    window.__rMetodeFilter='';
+    window.__rMet=(m)=>{ window.__rMetodeFilter=m; ['rmAll','rmCash','rmTf','rmTab'].forEach(id=>{ const e=$('#'+id); if(!e) return; e.classList.remove('bg-white','text-emerald-700','shadow'); e.classList.add('text-gray-500'); }); const map={'':'rmAll','cash':'rmCash','transfer':'rmTf','tabungan':'rmTab'}; const el=$('#'+map[m]); if(el){ el.classList.add('bg-white','text-emerald-700','shadow'); el.classList.remove('text-gray-500'); } window.__rR(); };
     window.__rF=()=>{ const m=$('#rB').value,y=$('#rY').value,t=$('#rT').value;
       return state.transaksi.filter(tr=>{ const d=new Date(tr.tanggal); if(y&&d.getFullYear()!==+y) return false; if(m!==''&&d.getMonth()!==+m) return false;
         if(t && (tr.tahun_ajaran||taLabel())!==t) return false;
+        if(window.__rMetodeFilter && (tr.metode||'cash')!==window.__rMetodeFilter) return false;
         if(sess().role!=='admin') return tr.input_user_id===sess().id; return true;
       });
     };
@@ -1423,15 +1564,16 @@ registerPage('rekap',{title:'Rekap Kas',bgClass:'bg-white',
         <div class="bg-rose-50 rounded-xl p-3 text-center"><p class="text-[10px] text-rose-700 uppercase font-bold">Kas Keluar</p><p class="font-extrabold text-rose-700 text-sm">${fmtIDR(keluar)}</p><p class="text-[10px] text-gray-500">💵${fmtIDR(kC)} · 🏦${fmtIDR(kT)}</p></div>
         <div class="bg-sky-50 rounded-xl p-3 text-center"><p class="text-[10px] text-sky-700 uppercase font-bold">Saldo</p><p class="font-extrabold text-sky-700 text-sm">${fmtIDR(masuk-keluar)}</p></div>
         <div class="bg-amber-50 rounded-xl p-3 text-center"><p class="text-[10px] text-amber-700 uppercase font-bold">Transaksi</p><p class="font-extrabold text-amber-700 text-sm">${list.length}</p></div>`;
-      $('#rL').innerHTML = list.length ? list.slice(0,300).map(tr=>{ const iIn=['spp_in','kas_in'].includes(tr.tipe);
-        return `<div class="p-3 flex items-center gap-3" data-testid="rekap-row-${tr.id}">
+      $('#rL').innerHTML = list.length ? list.slice(0,300).map(tr=>{ const iIn=['spp_in','kas_in'].includes(tr.tipe); const canClick = tr.tipe==='spp_in' && tr.siswa_id;
+        return `<div class="p-3 flex items-center gap-3 ${canClick?'cursor-pointer hover:bg-emerald-50/60':''}" ${canClick?`onclick="window.__rSiswa('${esc(tr.siswa_id)}')"`:''} data-testid="rekap-row-${tr.id}">
           <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm ${iIn?'bg-emerald-100 text-emerald-700':'bg-red-100 text-red-700'}"><i class="fas ${iIn?'fa-arrow-down':'fa-arrow-up'}"></i></div>
-          <div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">${esc(tr.kategori||(tr.tipe==='spp_in'?'SPP '+(tr.nama_siswa||''):tr.tipe))} <span class="text-[10px] bg-gray-100 px-1 rounded">${(tr.metode||'cash')==='cash'?'💵':'🏦'}</span></p>
+          <div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate ${canClick?'text-blue-700 hover:underline':''}">${esc(tr.kategori||(tr.tipe==='spp_in'?'SPP '+(tr.nama_siswa||''):tr.tipe))} <span class="text-[10px] bg-gray-100 px-1 rounded">${(tr.metode||'cash')==='cash'?'💵':((tr.metode||'')==='transfer'?'🏦':'💰')}</span>${tr.guru_pj?` <span class="text-[10px] bg-amber-100 text-amber-800 px-1 rounded">PJ: ${esc(tr.guru_pj)}</span>`:''}</p>
             <p class="text-[11px] text-gray-500 truncate">${esc(tr.keterangan||'-')} · ${fmtDate(tr.tanggal)} · oleh ${esc(tr.input_user_nama||'-')}</p></div>
           <p class="${iIn?'text-emerald-700':'text-red-700'} font-bold text-sm">${iIn?'+':'-'}${fmtIDR(tr.nominal)}</p>
         </div>`; }).join('') : '<p class="p-4 text-sm text-gray-400 text-center">Tidak ada transaksi.</p>';
     };
     window.__rR();
+    window.__rSiswa=(id)=>{ if(window.__tDet){ /* re-use tunggakan detail if available */ } const s=findSiswaById(id); if(!s){ toast('Siswa tidak ditemukan.','warn'); return; } navigate('spp'); setTimeout(()=>{ try{ window.__sppP(id); }catch(_){} }, 250); };
     window.__rPDF=()=>generatePDF(window.__rF(), $('#rB').value, $('#rY').value, $('#rT').value);
   }
 });
@@ -1507,7 +1649,7 @@ function generatePDF(list,m,y,ta){
   doc.autoTable({ startY:y2+4,
     head:[['Uraian Pemasukan','Jumlah (Rp)']],
     body: REK.pemasukan.map(r=>[r.label, fmtIDR(r.val)]),
-    foot:[[{content:'JUMLAH PEMASUKAN',styles:{halign:'right',fontStyle:'bold'}},{content:fmtIDR(REK.totMasuk),styles:{halign:'right',fontStyle:'bold',fillColor:[209,250,229]}}]],
+    foot:[[{content:'JUMLAH PEMASUKAN',styles:{halign:'right',fontStyle:'bold',textColor:[6,78,59]}},{content:fmtIDR(REK.totMasuk),styles:{halign:'right',fontStyle:'bold',fillColor:[209,250,229],textColor:[6,78,59]}}]],
     theme:'grid', styles:{fontSize:9,cellPadding:4}, headStyles:{fillColor:[16,185,129]},
     columnStyles:{0:{fontStyle:'bold'},1:{halign:'right'}}
   });
@@ -1516,7 +1658,7 @@ function generatePDF(list,m,y,ta){
   doc.autoTable({ startY:y2+4,
     head:[['Uraian Pengeluaran','Jumlah (Rp)']],
     body: REK.pengeluaran.length?REK.pengeluaran.map(r=>[r.label,fmtIDR(r.val)]):[[{content:'Tidak ada pengeluaran',colSpan:2,styles:{halign:'center',textColor:[150,150,150]}}]],
-    foot:[[{content:'JUMLAH PENGELUARAN',styles:{halign:'right',fontStyle:'bold'}},{content:fmtIDR(REK.totKeluar),styles:{halign:'right',fontStyle:'bold',fillColor:[254,226,226]}}]],
+    foot:[[{content:'JUMLAH PENGELUARAN',styles:{halign:'right',fontStyle:'bold',textColor:[136,19,55]}},{content:fmtIDR(REK.totKeluar),styles:{halign:'right',fontStyle:'bold',fillColor:[254,226,226],textColor:[136,19,55]}}]],
     theme:'grid', styles:{fontSize:9,cellPadding:4}, headStyles:{fillColor:[244,63,94]},
     columnStyles:{0:{fontStyle:'bold'},1:{halign:'right'}}
   });
@@ -1525,7 +1667,7 @@ function generatePDF(list,m,y,ta){
     body:[
       [{content:'JUMLAH MASUK',styles:{fontStyle:'bold'}},{content:fmtIDR(REK.totMasuk),styles:{halign:'right',fontStyle:'bold',textColor:[5,150,105]}}],
       [{content:'JUMLAH KELUAR',styles:{fontStyle:'bold'}},{content:fmtIDR(REK.totKeluar),styles:{halign:'right',fontStyle:'bold',textColor:[244,63,94]}}],
-      [{content:'SALDO AKHIR',styles:{fontStyle:'bold',fillColor:[224,242,254]}},{content:fmtIDR(REK.saldo),styles:{halign:'right',fontStyle:'bold',fillColor:[224,242,254],textColor:[2,132,199]}}]
+      [{content:'SALDO AKHIR',styles:{fontStyle:'bold',fillColor:[224,242,254],textColor:[12,74,110]}},{content:fmtIDR(REK.saldo),styles:{halign:'right',fontStyle:'bold',fillColor:[224,242,254],textColor:[12,74,110]}}]
     ],
     theme:'grid', styles:{fontSize:10,cellPadding:5}
   });
@@ -1539,7 +1681,7 @@ function generatePDF(list,m,y,ta){
       ['Tunggakan SMP', REK.tgCnt.SMP+' santri', fmtIDR(REK.tgByJen.SMP)],
       ...(REK.tgByJen.Lainnya>0?[['Tunggakan Lainnya', REK.tgCnt.Lainnya+' santri', fmtIDR(REK.tgByJen.Lainnya)]]:[])
     ],
-    foot:[[{content:'TOTAL TUNGGAKAN',colSpan:2,styles:{halign:'right',fontStyle:'bold'}},{content:fmtIDR(REK.totTunggakan),styles:{halign:'right',fontStyle:'bold',fillColor:[254,243,199]}}]],
+    foot:[[{content:'TOTAL TUNGGAKAN',colSpan:2,styles:{halign:'right',fontStyle:'bold',textColor:[120,53,15]}},{content:fmtIDR(REK.totTunggakan),styles:{halign:'right',fontStyle:'bold',fillColor:[254,243,199],textColor:[120,53,15]}}]],
     theme:'grid', styles:{fontSize:9,cellPadding:4}, headStyles:{fillColor:[245,158,11]},
     columnStyles:{0:{fontStyle:'bold'},1:{halign:'center'},2:{halign:'right'}}
   });
@@ -1567,7 +1709,7 @@ function generatePDF(list,m,y,ta){
     body: masuk.length? masuk.map((t,i)=>[i+1, fmtDate(t.tanggal), (t.nama_siswa||t.kategori||'-'), (t.keterangan||'-'), (t.metode||'cash').toUpperCase(), fmtIDR(t.nominal)]) : [[{content:'Tidak ada pemasukan pada periode ini.',colSpan:6,styles:{halign:'center',textColor:[150,150,150]}}]],
     styles:{fontSize:8,cellPadding:3}, headStyles:{fillColor:[16,185,129]},
     columnStyles:{0:{halign:'center',cellWidth:22},5:{halign:'right'}},
-    foot:[[{content:'TOTAL PEMASUKAN',colSpan:5,styles:{halign:'right',fontStyle:'bold'}}, {content:fmtIDR(mC),styles:{halign:'right',fontStyle:'bold',fillColor:[209,250,229]}}]]
+    foot:[[{content:'TOTAL PEMASUKAN',colSpan:5,styles:{halign:'right',fontStyle:'bold',textColor:[6,78,59]}}, {content:fmtIDR(mC),styles:{halign:'right',fontStyle:'bold',fillColor:[209,250,229],textColor:[6,78,59]}}]]
   });
   y2=doc.lastAutoTable.finalY+14;
   if(y2>PH-160){ doc.addPage(); y2=50; }
@@ -1579,7 +1721,7 @@ function generatePDF(list,m,y,ta){
     body: keluar.length? keluar.map((t,i)=>[i+1, fmtDate(t.tanggal), (t.kategori||'-'), (t.keterangan||'-'), (t.metode||'cash').toUpperCase(), fmtIDR(t.nominal)]) : [[{content:'Tidak ada pengeluaran pada periode ini.',colSpan:6,styles:{halign:'center',textColor:[150,150,150]}}]],
     styles:{fontSize:8,cellPadding:3}, headStyles:{fillColor:[244,63,94]},
     columnStyles:{0:{halign:'center',cellWidth:22},5:{halign:'right'}},
-    foot:[[{content:'TOTAL PENGELUARAN',colSpan:5,styles:{halign:'right',fontStyle:'bold'}}, {content:fmtIDR(kC),styles:{halign:'right',fontStyle:'bold',fillColor:[254,226,226]}}]]
+    foot:[[{content:'TOTAL PENGELUARAN',colSpan:5,styles:{halign:'right',fontStyle:'bold',textColor:[136,19,55]}}, {content:fmtIDR(kC),styles:{halign:'right',fontStyle:'bold',fillColor:[254,226,226],textColor:[136,19,55]}}]]
   });
   y2=doc.lastAutoTable.finalY+18;
 
@@ -1593,7 +1735,7 @@ function generatePDF(list,m,y,ta){
       body: tg.map(({s,c},i)=>[i+1, s.nama, (s.jenjang+'/'+(s.kelas||'-')), s.nis||'-', fmtIDR(c.tLalu), fmtIDR(c.total)]),
       styles:{fontSize:8,cellPadding:3}, headStyles:{fillColor:[245,158,11]},
       columnStyles:{0:{halign:'center',cellWidth:22},4:{halign:'right'},5:{halign:'right'}},
-      foot:[[{content:'TOTAL TUNGGAKAN ('+tg.length+' santri)',colSpan:5,styles:{halign:'right',fontStyle:'bold'}}, {content:fmtIDR(tg.reduce((s,x)=>s+x.c.total,0)),styles:{halign:'right',fontStyle:'bold',fillColor:[254,243,199]}}]]
+      foot:[[{content:'TOTAL TUNGGAKAN ('+tg.length+' santri)',colSpan:5,styles:{halign:'right',fontStyle:'bold',textColor:[120,53,15]}}, {content:fmtIDR(tg.reduce((s,x)=>s+x.c.total,0)),styles:{halign:'right',fontStyle:'bold',fillColor:[254,243,199],textColor:[120,53,15]}}]]
     });
     y2=doc.lastAutoTable.finalY+18;
   }
@@ -1608,7 +1750,7 @@ function generatePDF(list,m,y,ta){
       body: h.entries.map(e=>[fmtDate(e.tanggal), e.keterangan||'-', fmtIDR(e.jumlah_pinjam||0), fmtIDR(e.jumlah_bayar||0)]),
       styles:{fontSize:8,cellPadding:3}, headStyles:{fillColor:[139,92,246]},
       columnStyles:{2:{halign:'right'},3:{halign:'right'}},
-      foot:[[{content:'HUTANG TERSISA',colSpan:3,styles:{halign:'right',fontStyle:'bold'}}, {content:fmtIDR(h.sisa),styles:{halign:'right',fontStyle:'bold',fillColor:[237,233,254]}}]]
+      foot:[[{content:'HUTANG TERSISA',colSpan:3,styles:{halign:'right',fontStyle:'bold',textColor:[76,29,149]}}, {content:fmtIDR(h.sisa),styles:{halign:'right',fontStyle:'bold',fillColor:[237,233,254],textColor:[76,29,149]}}]]
     });
     y2=doc.lastAutoTable.finalY+18;
   }
@@ -1783,7 +1925,7 @@ registerPage('tunggakan',{title:'Data Tunggakan',bgClass:'bg-white',
         body: items.map((x,i)=>[i+1, x.s.nama, x.s.nis||'-', x.s.nisn||'-', (x.s.jenjang+'/'+(x.s.kelas||'-')), fmtIDR(x.c.total)]),
         styles:{fontSize:9,cellPadding:4}, headStyles:{fillColor:[244,63,94]},
         columnStyles:{0:{halign:'center',cellWidth:28},5:{halign:'right'}},
-        foot:[[{content:'TOTAL TUNGGAKAN ('+items.length+' santri)',colSpan:5,styles:{halign:'right',fontStyle:'bold'}},{content:fmtIDR(total),styles:{halign:'right',fontStyle:'bold',fillColor:[254,226,226]}}]]
+        foot:[[{content:'TOTAL TUNGGAKAN ('+items.length+' santri)',colSpan:5,styles:{halign:'right',fontStyle:'bold',textColor:[136,19,55]}},{content:fmtIDR(total),styles:{halign:'right',fontStyle:'bold',fillColor:[254,226,226],textColor:[136,19,55]}}]]
       });
       let y2=doc.lastAutoTable.finalY+30;
       const PH=doc.internal.pageSize.getHeight();
@@ -2155,7 +2297,7 @@ registerPage('admin-tunggakan-lalu',{title:'Tunggakan Tahun Lalu',bgClass:'bg-wh
 registerPage('admin-buku-hutang',{title:'Buku Hutang',bgClass:'bg-white',adminOnly:true,
   render(){ const h=rekapHutang();
     return `<div class="max-w-3xl mx-auto">
-      <div class="bg-amber-50 p-3 rounded-xl mb-3 text-xs text-amber-800"><i class="fas fa-info-circle mr-1"></i>Buku Hutang <b>khusus</b> mencatat: <b>Kas Keluar → "Hutang Operasional"</b> (pinjam) dan <b>Kas Masuk → "Bayar Hutang"</b> (bayar). Kategori lain tidak dicatat di sini.</div>
+      <div class="bg-amber-50 p-3 rounded-xl mb-3 text-xs text-amber-800"><i class="fas fa-info-circle mr-1"></i>Buku Hutang mencatat: <b>Kas MASUK → "Hutang Operasional"</b> = TERIMA pinjaman (menambah hutang) dan <b>Kas KELUAR → "Bayar Hutang"</b> = MELUNASI (mengurangi hutang). Kategori lain tidak dicatat di sini.</div>
       <div class="grid grid-cols-3 gap-2 mb-4">
         <div class="bg-rose-50 p-3 rounded-xl text-center"><p class="text-[10px] text-rose-700 font-bold uppercase">Total Pinjam</p><p class="text-base font-extrabold text-rose-700">${fmtIDR(h.totPinjam)}</p></div>
         <div class="bg-emerald-50 p-3 rounded-xl text-center"><p class="text-[10px] text-emerald-700 font-bold uppercase">Total Bayar</p><p class="text-base font-extrabold text-emerald-700">${fmtIDR(h.totBayar)}</p></div>
@@ -2190,12 +2332,40 @@ registerPage('admin-rekap-guru',{title:'Saldo Per Guru',bgClass:'bg-white',admin
       const setor=state.transaksi.filter(t=>t.input_user_id===g.id && t.tipe==='setor').reduce((s,t)=>s+(+t.nominal||0),0);
       return { g, masuk, keluar, setor, saldo: masuk-keluar-setor };
     });
-    return `<div class="max-w-3xl mx-auto"><div class="divide-y border rounded-xl bg-white">${data.length?data.map(r=>`<div class="p-4" data-testid="rekap-guru-row-${r.g.id}"><p class="font-semibold">${esc(r.g.nama)} <span class="text-[10px] text-gray-500">@${esc(r.g.username)}</span></p><div class="grid grid-cols-4 gap-2 mt-2 text-xs">
+    // v18 (item 13): guru dengan saldo>0 dianggap "menunggu setor" → tampilkan badge notifikasi
+    const notifCnt=data.filter(r=>r.saldo>0).length;
+    return `<div class="max-w-3xl mx-auto">
+      ${notifCnt?`<div class="bg-amber-50 border border-amber-300 rounded-xl p-3 mb-3 flex items-center gap-2"><i class="fas fa-bell text-amber-600 text-lg animate-pulse"></i><div class="flex-1 text-sm text-amber-800"><b>${notifCnt} guru</b> memiliki saldo di tangan menunggu setor ke Bendahara Pusat.</div></div>`:''}
+      <div class="divide-y border rounded-xl bg-white">${data.length?data.map(r=>`<div class="p-4" data-testid="rekap-guru-row-${r.g.id}"><div class="flex items-center justify-between"><p class="font-semibold">${esc(r.g.nama)} <span class="text-[10px] text-gray-500">@${esc(r.g.username)}</span>${r.saldo>0?' <span class="ml-1 text-[10px] bg-rose-600 text-white px-1.5 py-0.5 rounded-full font-bold">MENUNGGU SETOR</span>':''}</p><div class="flex gap-1"><button onclick="window.__guruDetail('${r.g.id}')" class="text-xs bg-sky-600 text-white font-bold px-3 py-1.5 rounded-lg"><i class="fas fa-eye mr-1"></i>Detail</button>${r.saldo>0?`<button onclick="window.__guruAckSetor('${r.g.id}')" class="text-xs bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-lg"><i class="fas fa-check mr-1"></i>Terima Setoran</button>`:''}</div></div><div class="grid grid-cols-4 gap-2 mt-2 text-xs">
       <div class="bg-emerald-50 p-2 rounded text-center"><p class="text-emerald-700 font-bold uppercase text-[10px]">Masuk</p><p class="text-emerald-700 font-bold">${fmtIDR(r.masuk)}</p></div>
       <div class="bg-rose-50 p-2 rounded text-center"><p class="text-rose-700 font-bold uppercase text-[10px]">Keluar</p><p class="text-rose-700 font-bold">${fmtIDR(r.keluar)}</p></div>
       <div class="bg-sky-50 p-2 rounded text-center"><p class="text-sky-700 font-bold uppercase text-[10px]">Disetor</p><p class="text-sky-700 font-bold">${fmtIDR(r.setor)}</p></div>
-      <div class="bg-amber-50 p-2 rounded text-center"><p class="text-amber-700 font-bold uppercase text-[10px]">Sisa</p><p class="text-amber-700 font-bold">${fmtIDR(r.saldo)}</p></div>
+      <div class="bg-amber-50 p-2 rounded text-center"><p class="text-amber-700 font-bold uppercase text-[10px]">Sisa</p><p class="${r.saldo>0?'text-rose-700':'text-emerald-700'} font-bold">${fmtIDR(r.saldo)}</p></div>
     </div></div>`).join(''):'<p class="p-3 text-sm text-gray-400 text-center">Belum ada guru.</p>'}</div></div>`;
+  },
+  mounted(){
+    // v18 (item 11): tampilkan rincian pemasukan per guru
+    window.__guruDetail=(gid)=>{
+      const g=state.users.find(u=>u.id===gid); if(!g) return;
+      const trs=state.transaksi.filter(t=>t.input_user_id===gid || t.guru_pj===g.nama).sort((a,b)=> new Date(b.tanggal)-new Date(a.tanggal));
+      const rows=trs.length? trs.map(t=>{ const lbl = t.tipe==='spp_in'?('SPP '+(t.nama_siswa||'-')) : t.tipe==='kas_in'?('Kas Masuk · '+(t.kategori||'')) : t.tipe==='kas_out'?('Kas Keluar · '+(t.kategori||'')) : t.tipe==='setor'?'Setor ke Bendahara' : t.tipe; const cls = ['spp_in','kas_in'].includes(t.tipe)?'text-emerald-700':(t.tipe==='setor'?'text-sky-700':'text-rose-700'); const sign=['spp_in','kas_in'].includes(t.tipe)?'+':'-'; return `<div class="p-2 border-t text-xs flex justify-between"><div><b>${esc(lbl)}</b><br><span class="text-gray-500">${fmtDate(t.tanggal)} · ${(t.metode||'cash').toUpperCase()}${t.guru_pj?` · PJ: ${esc(t.guru_pj)}`:''}</span></div><span class="${cls} font-bold">${sign}${fmtIDR(t.nominal)}</span></div>`; }).join('') : '<p class="p-3 text-xs text-gray-400 text-center">Belum ada transaksi.</p>';
+      openModal(modalBox('Rincian Saldo — '+g.nama, `<div class="max-h-[60vh] overflow-y-auto border rounded-lg">${rows}</div>`));
+    };
+    // v18 (item 13): terima setoran → saldo guru direset ke 0 via transaksi setor otomatis
+    window.__guruAckSetor=(gid)=>{
+      const g=state.users.find(u=>u.id===gid); if(!g) return;
+      const sal=saldoUserDiTangan(gid); if(sal<=0){ toast('Saldo guru sudah 0.','info'); return; }
+      const met=prompt('Terima setoran Rp '+fmtIDR(sal).replace('Rp ','')+' dari '+g.nama+'\n\nUang masuk ke:\n1 = Saldo Tunai (Cash)\n2 = Saldo Bank (Transfer)\n\nKetik 1 atau 2:','1');
+      if(met!=='1' && met!=='2') return;
+      const metode = met==='1'?'cash':'transfer';
+      if(!confirm('Konfirmasi: TERIMA SETORAN '+fmtIDR(sal)+' dari '+g.nama+' via '+metode.toUpperCase()+'?\n\nSaldo guru akan direset ke 0.')) return;
+      const adm=adminUser();
+      const t1={ id:uid(), tipe:'setor', tanggal:new Date().toISOString(), tahun_ajaran:taLabel(), metode, nominal:sal, kategori:'Setor', keterangan:'Setor diterima Bendahara Pusat', input_user_id:gid, input_user_nama:g.nama, input_user_role:'guru', sumber:'tangan', created_at:new Date().toISOString() };
+      const t2={ ...t1, id:uid(), tipe:'kas_in', kategori:'Setoran Guru', keterangan:'Terima setoran dari '+g.nama, input_user_id:adm.id, input_user_nama:adm.nama, input_user_role:'admin', sumber:'bendahara', ref_setor_id:t1.id };
+      state.transaksi.unshift(t1,t2); saveState(); try{ enqueue('transaksi','upsert',t1); enqueue('transaksi','upsert',t2); }catch(_){}
+      toast('✅ Setoran '+g.nama+' diterima. Saldo guru → 0.','success');
+      navigate('admin-rekap-guru');
+    };
   }
 });
 
@@ -2624,7 +2794,8 @@ registerPage('receipt',{title:'Bukti Pembayaran Infaq Syahriyah',bgClass:'bg-gra
       const stat = isFree?'GRATIS' : lunas?'LUNAS' : paid>0?'BLM' : 'BLM';
       const nom = isFree ? '-' : (paid>0 ? fmtIDR(paid) : fmtIDR(tarif));
       const tg = tanggalTrxBulan(b);
-      return `<div class="cell"><span>${b.slice(0,3)} ${tahunUntukBulan(b)} ${tg?'<span style="color:#666">'+tg+'</span>':''}</span><span>${nom} <b style="color:${isFree?'#b45309':(lunas?'#059669':'#dc2626')}">${stat}</b></span></div>`;
+      const tgTxt = tg?' '+tg:'';
+      return `<div class="cell"><span>${b.slice(0,3)}'${String(tahunUntukBulan(b)).slice(-2)}${tgTxt}</span><span>${nom} <b style="color:${isFree?'#b45309':(lunas?'#059669':'#dc2626')}">${stat}</b></span></div>`;
     }
     const grid12 = `<div class="grid2">${kiri.map(baris).join('')}${kanan.map(baris).join('')}</div>`;
     const no='TRX-'+new Date(t.tanggal).toISOString().slice(0,10).replace(/-/g,'')+'-'+t.id.slice(-5).toUpperCase();
@@ -2651,7 +2822,7 @@ registerPage('receipt',{title:'Bukti Pembayaran Infaq Syahriyah',bgClass:'bg-gra
           <div class="row"><span>Jenjang/Kelas</span><span><b>${esc(t.jenjang||s.jenjang||'-')}/${esc(t.kelas||s.kelas||'-')}</b></span></div>
           <div class="row"><span>Tarif/bln</span><span>${fmtIDR(tarif)}</span></div>
           <hr>
-          <div style="font-weight:700;margin:4px 0 2px;text-align:center">REKAP PEMBAYAR SISWA TA ${esc(ta)}</div>
+          <div style="font-weight:700;margin:4px 0 2px;text-align:center">REKAP PEMBAYARAN SISWA TA ${esc(ta)}</div>
           ${grid12}
           <hr>
           <div class="row total"><span>TOTAL BAYAR HARI INI<br><span style="font-size:10px;font-weight:400">(${fmtDate(t.tanggal)})</span></span><span>${fmtIDR(todayBayar||t.nominal)}</span></div>
@@ -2669,12 +2840,27 @@ registerPage('receipt',{title:'Bukti Pembayaran Infaq Syahriyah',bgClass:'bg-gra
   mounted(params){ const t=state.transaksi.find(x=>x.id===params.id); if(!t) return; const s=state.siswa.find(x=>x.id===t.siswa_id)||{};
     try { const bb=document.getElementById('btnBack'); if(bb){ bb.onclick=()=>navigate('spp'); } } catch(_){}
     window.__rPr=()=>window.print();
-    window.__rDl=async ()=>{ if(!window.html2canvas){ toast('Library belum siap.','warn'); return; } const c=await window.html2canvas($('#receiptCanvas'),{backgroundColor:'#fff',scale:2}); const a=document.createElement('a'); a.href=c.toDataURL('image/png'); a.download='Resi_'+(t.nama_siswa||'siswa')+'_'+new Date(t.tanggal).toISOString().slice(0,10)+'.png'; a.click(); toast('Disimpan.'); };
+    async function __waitLogo(){
+      // v18 (item 9): pastikan logo di resi selesai load sebelum snapshot
+      const imgs=$('#receiptCanvas').querySelectorAll('img');
+      await Promise.all(Array.from(imgs).map(img=>{
+        if(img.complete && img.naturalWidth>0) return;
+        try{ img.crossOrigin='anonymous'; }catch(_){}
+        return new Promise(res=>{ img.onload=()=>res(); img.onerror=()=>res(); setTimeout(res,1500); });
+      }));
+    }
+    window.__rDl=async ()=>{
+      if(!window.html2canvas){ toast('Library belum siap.','warn'); return; }
+      await __waitLogo();
+      const c=await window.html2canvas($('#receiptCanvas'),{backgroundColor:'#fff',scale:2,useCORS:true,allowTaint:false});
+      const a=document.createElement('a'); a.href=c.toDataURL('image/png'); a.download='Resi_'+(t.nama_siswa||'siswa')+'_'+new Date(t.tanggal).toISOString().slice(0,10)+'.png'; a.click(); toast('Disimpan.');
+    };
     window.__rWA=async ()=>{
       const wa=normalizeWA(s.no_wa||'');
       if(!wa){ toast('No WA wali belum diisi pada data siswa.','warn'); return; }
       if(!window.html2canvas){ toast('Library belum siap.','warn'); return; }
-      const c=await window.html2canvas($('#receiptCanvas'),{backgroundColor:'#fff',scale:2});
+      await __waitLogo();
+      const c=await window.html2canvas($('#receiptCanvas'),{backgroundColor:'#fff',scale:2,useCORS:true,allowTaint:false});
       const du=c.toDataURL('image/png');
       const txt = '*BUKTI PEMBAYARAN INFAQ SYAHRIYAH*%0A'+encodeURIComponent(sek())+'%0A%0AAssalāmuʿalaikum Bapak/Ibu Wali Santri%0A%0AAtas nama: *'+encodeURIComponent(t.nama_siswa||s.nama||'')+'*%0ATanggal: '+encodeURIComponent(fmtDate(t.tanggal))+'%0ATotal: *'+encodeURIComponent(fmtIDR(t.nominal))+'*%0A%0AFoto bukti pembayaran terlampir.%0AJazākumullāhu khairan. 🙏';
       try{ const blob=await (await fetch(du)).blob(); const file=new File([blob],'Resi.png',{type:'image/png'}); if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'Bukti Pembayaran', text:decodeURIComponent(txt.replace(/%0A/g,'\n').replace(/\*/g,''))}); return; } }catch(e){}
