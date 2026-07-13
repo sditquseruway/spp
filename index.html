@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
-<title>Infaq Santri App v24</title>
+<title>Infaq Santri App v26</title>
 <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
 <!-- emergent-main.js dihapus: script eksternal ini memblokir klik menu setelah login -->
 <style>
@@ -48,11 +48,12 @@ body{overflow:hidden;height:100vh}
 .sync-dot.err{background:#ef4444;box-shadow:0 0 8px #ef4444;animation:pulse 1.4s infinite}
 .sync-dot.sync{background:#f59e0b;animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-#receiptCanvas{font-family:'Courier New','Roboto Mono',monospace;background:#fff;color:#000;width:430px;max-width:100%;padding:14px 16px;margin:0 auto;font-size:12px;line-height:1.45;box-sizing:border-box;overflow:visible}
-#receiptCanvas .grid2{display:grid;grid-template-columns:1fr;gap:2px;margin:2px 0}
-#receiptCanvas .grid2 .cell{font-size:10.5px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;border-bottom:1px dotted #ccc;padding:3px 0;line-height:1.25;min-height:18px;white-space:normal;overflow:visible}
-#receiptCanvas .grid2 .cell > span{overflow:visible;text-overflow:clip;white-space:normal}
-#receiptCanvas .grid2 .cell > span:last-child{flex:0 0 58%;padding-left:4px;text-align:right;word-break:break-word}
+#receiptCanvas{font-family:'Courier New','Roboto Mono',monospace;background:#fff;color:#000;width:76mm;min-width:76mm;max-width:76mm;padding:14px 16px;margin:0 auto;font-size:11px;line-height:1.45;box-sizing:border-box;overflow:visible}
+#receiptCanvas .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 8px;margin:2px 0;width:100%;box-sizing:border-box}
+#receiptCanvas .grid2 .cell{font-size:9.5px;display:flex;justify-content:space-between;align-items:flex-start;gap:4px;border-bottom:1px dotted #ccc;padding:2px 0;line-height:1.25;min-height:17px;white-space:normal;overflow:visible;box-sizing:border-box;min-width:0}
+#receiptCanvas .grid2 .cell > span{overflow:visible;text-overflow:clip;white-space:normal;min-width:0}
+#receiptCanvas .grid2 .cell > span:first-child{flex:0 0 42%}
+#receiptCanvas .grid2 .cell > span:last-child{flex:1 1 auto;padding-left:3px;text-align:right;word-break:normal;overflow-wrap:anywhere}
 #receiptCanvas .r-logo{display:block;margin:0 auto 4px;max-width:60px;max-height:60px}
 #receiptCanvas .r-title{font-weight:800;text-align:center;font-size:14px;letter-spacing:.5px}
 #receiptCanvas .r-sub{text-align:center;font-size:11px}
@@ -60,6 +61,7 @@ body{overflow:hidden;height:100vh}
 #receiptCanvas .row{display:flex;justify-content:space-between;gap:8px;padding:1px 0}
 #receiptCanvas .row span:last-child{text-align:right;word-break:break-word}
 #receiptCanvas .total{font-size:14px;font-weight:800}
+#receiptExportStage{position:fixed;left:0;top:0;width:76mm;min-width:76mm;max-width:76mm;background:#fff;opacity:1;pointer-events:none;z-index:-1;overflow:visible}
 .modal-backdrop{background:rgba(15,23,42,.6);backdrop-filter:blur(3px)}
 .offline-banner{position:fixed;top:0;left:0;right:0;background:#ef4444;color:#fff;text-align:center;font-size:12px;padding:6px 12px;z-index:60;transform:translateY(-100%);transition:transform .25s}
 .offline-banner.show{transform:translateY(0)}
@@ -67,10 +69,10 @@ body{overflow:hidden;height:100vh}
 /* v20 (item 8): thermal receipt printing 80mm */
 @media print{
   @page{size:80mm auto;margin:2mm}
-  #receiptCanvas{width:76mm!important;font-size:11px!important;margin:0 auto;page-break-inside:avoid}
-  #receiptCanvas .r-title{font-size:12px!important}
-  #receiptCanvas .r-sub{font-size:10px!important}
-  #receiptCanvas .total{font-size:12px!important}
+  #receiptCanvas{width:76mm!important;min-width:76mm!important;max-width:76mm!important;font-size:11px!important;margin:0 auto;page-break-inside:avoid}
+  #receiptCanvas .r-title{font-size:14px!important}
+  #receiptCanvas .r-sub{font-size:11px!important}
+  #receiptCanvas .total{font-size:14px!important}
   #receiptCanvas .grid2{min-height:auto!important}
   html,body{background:#fff!important}
 }
@@ -235,14 +237,21 @@ function normalizeTipeTransaksi(t){
   if(raw.includes('internal')) return 'internal_move';
   return raw || 'kas_in';
 }
+function isCatatanSetoranGuru(t){
+  const k=String(t?.kategori||'').toLowerCase();
+  const ket=String(t?.keterangan||'').toLowerCase();
+  return !!(t && (t.tipe==='setor' || t.ref_setor_id || k.includes('setoran guru') || k.includes('terima setoran guru') || ket.includes('terima setoran dari')));
+}
 function normalizeTransaksiRecord(t){
   if(!t || typeof t!=='object') return t;
   if(!t.id) t.id='trx_'+uid();
   t.tipe=normalizeTipeTransaksi(t);
+  if(t.tipe==='kas_in' && isCatatanSetoranGuru(t)) t.tipe='setor';
   t.nominal=rupiahNumber(t.nominal);
   if(!t.tanggal) t.tanggal=t.created_at||todayISO();
   if(!t.metode) t.metode='cash';
   if(!t.sumber) t.sumber=(t.input_user_role==='admin')?'bendahara':'tangan';
+  if(t.tipe==='setor' && (t.ref_setor_id || String(t.keterangan||'').toLowerCase().includes('terima setoran'))) t.sumber='bendahara';
   if(t.tipe==='spp_in' && !t.kategori) t.kategori='SPP';
   return t;
 }
@@ -782,9 +791,10 @@ function hitungTunggakan(s,opts={}){
    Semua penghitungan saldo untuk Dashboard, Rekap, Buku Kas Umum, dan
    Laporan PDF WAJIB melalui helper di bawah ini agar tidak ada perbedaan.
    Aturan: kas_in / spp_in menambah, kas_out mengurangi. `internal_move`
-   dan `setor` = mutasi internal, tidak mempengaruhi total sistem. */
+   dan `setor` = mutasi internal, tidak menjadi pendapatan; setoran guru
+   hanya memindahkan saldo dari tangan guru ke bendahara agar tidak double. */
 function isAdmin(){ return session?.role==='admin'; }
-function isInMasuk(t){ return t && (t.tipe==='spp_in'||t.tipe==='kas_in'); }
+function isInMasuk(t){ return t && !isCatatanSetoranGuru(t) && (t.tipe==='spp_in'||t.tipe==='kas_in'); }
 function isOutKas(t){ return t && t.tipe==='kas_out'; }
 function __tglOk(t, dateISOEnd){
   if(!dateISOEnd) return true;
@@ -815,10 +825,15 @@ function bendaharaSampai(dateISOEnd, metode){
       if(t.to_metode===metode)   s += nm;
       return;
     }
-    if((t.sumber||'tangan')!=='bendahara') return;
     if(metode && (t.metode||'cash')!==metode) return;
     if(!__tglOk(t,dateISOEnd)) return;
-    if(isInMasuk(t)) s += Number(t.nominal||0);
+    if(t.tipe==='setor'){
+      if(t.ref_setor_id || (t.sumber||'')==='bendahara') return;
+      s += Number(t.nominal||0);
+      return;
+    }
+    if((t.sumber||'tangan')!=='bendahara') return;
+    else if(isInMasuk(t)) s += Number(t.nominal||0);
     else if(isOutKas(t)) s -= Number(t.nominal||0);
   });
   return Math.round(s);
@@ -932,7 +947,7 @@ registerPage('home',{
     let pendHariIni = 0, pendHariIniCnt = 0;
     if(admin){
       state.transaksi.forEach(t=>{
-        if(['spp_in','kas_in'].includes(t.tipe) && (t.tanggal||'').slice(0,10)===_todayIso){
+        if(['spp_in','kas_in'].includes(t.tipe) && !isCatatanSetoranGuru(t) && (t.tanggal||'').slice(0,10)===_todayIso){
           pendHariIni += Number(t.nominal||0); pendHariIniCnt++;
         }
       });
@@ -1046,14 +1061,14 @@ function mb(page,icon,label,btn='bg-slate-800 text-white',ic='text-aksen bg-whit
   window.__dashTabungList=()=>{ const rows=daftarSiswaByMetode('tabungan'); openModal(modalBox('Siswa Bayar TABUNGAN — Hari Ini', tabelSiswa(rows,'TABUNGAN'))); };
   window.__dashJurnalHariIni=()=>{
     const _todayIso = new Date().toISOString().slice(0,10);
-    const rows=state.transaksi.filter(t=>['spp_in','kas_in'].includes(t.tipe) && (t.tanggal||'').slice(0,10)===_todayIso);
+    const rows=state.transaksi.filter(t=>['spp_in','kas_in'].includes(t.tipe) && !isCatatanSetoranGuru(t) && (t.tanggal||'').slice(0,10)===_todayIso);
     openModal(modalBox('Jurnal Pemasukan Hari Ini', rows.length?
       '<div class="divide-y">'+rows.map(t=>`<div class="p-2 flex justify-between text-xs"><div><b>${esc(t.nama_siswa||t.kategori||'-')}</b><br><span class="text-gray-500">${(t.metode||'cash').toUpperCase()} · ${esc(t.keterangan||'-')}</span></div><span class="font-bold text-emerald-700">${fmtIDR(t.nominal)}</span></div>`).join('')+'</div>'
       : '<p class="p-4 text-sm text-gray-400 text-center">Belum ada pemasukan hari ini.</p>'));
   };
 })();
 
-window.__ISA__={state,queue,session,registerPage,navigate,toast,uid,esc,fmtIDR,fmtDate,fmtDateTime,modalBox,openModal,closeModal,saveState,saveQueue,enqueue,hitungTunggakan,getSppTarif,tarifJenjang,bulanTerbayar,sppTrxBySiswa,tunggakanLaluSiswa,tunggakanLaluTotal,normalizeWA,bulanWajibInTA,bulanWajibSampai,saldoBendaharaCash,saldoBendaharaTransfer,saldoUserDiTangan,totalSekolah,adminUser,rekapHutang,ensureHutangKategori,taLabel,pullSpreadsheet,pushSnapshot,flushQueue,gasJsonp,saldoSampai,akhirBulanSebelum,BULAN_LIST,BULAN_FULL,JENJANG_LIST,JALUR_LIST,$,$$ ,isAdmin,inTA,taYears,attachRupiahMask,bindAllRupiah,rupiahVal,fmtThousand,onlyDigits,bulanGratisFor,bulanTerbayarRp,statusBulan,jalurOptions,findSiswaById,normalizeAllSiswa,normalizeSiswaRecord,normalizeTransaksiRecord,normalizeKasKhususRecord};
+window.__ISA__={state,queue,session,registerPage,navigate,toast,uid,esc,fmtIDR,fmtDate,fmtDateTime,modalBox,openModal,closeModal,saveState,saveQueue,enqueue,hitungTunggakan,getSppTarif,tarifJenjang,bulanTerbayar,sppTrxBySiswa,tunggakanLaluSiswa,tunggakanLaluTotal,normalizeWA,bulanWajibInTA,bulanWajibSampai,saldoBendaharaCash,saldoBendaharaTransfer,saldoUserDiTangan,totalSekolah,adminUser,rekapHutang,ensureHutangKategori,taLabel,pullSpreadsheet,pushSnapshot,flushQueue,gasJsonp,saldoSampai,akhirBulanSebelum,BULAN_LIST,BULAN_FULL,JENJANG_LIST,JALUR_LIST,$,$$ ,isAdmin,inTA,taYears,attachRupiahMask,bindAllRupiah,rupiahVal,fmtThousand,onlyDigits,bulanGratisFor,bulanTerbayarRp,statusBulan,jalurOptions,findSiswaById,normalizeAllSiswa,normalizeSiswaRecord,normalizeTransaksiRecord,normalizeKasKhususRecord,isCatatanSetoranGuru};
 window.__ISA__.saldoGuruTotal=saldoGuruTotal;
 window.__ISA__.totalSaldoAll=totalSaldoAll;
 window.__ISA__.totalTunggakanAll=totalTunggakanAll;
@@ -1084,7 +1099,7 @@ document.addEventListener('DOMContentLoaded', boot);
 <script id="pagesScript">
 (()=>{ 'use strict';
 const K=window.__ISA__; if(!K) return;
-const {state,registerPage,navigate,toast,uid,esc,fmtIDR,fmtDate,fmtDateTime,modalBox,openModal,closeModal,saveState,saveQueue,enqueue,hitungTunggakan,getSppTarif,tarifJenjang,bulanTerbayar,sppTrxBySiswa,tunggakanLaluSiswa,tunggakanLaluTotal,normalizeWA,bulanWajibInTA,bulanWajibSampai,saldoBendaharaCash,saldoBendaharaTransfer,saldoUserDiTangan,totalSekolah,adminUser,rekapHutang,taLabel,pullSpreadsheet,pushSnapshot,flushQueue,gasJsonp,saldoSampai,akhirBulanSebelum,BULAN_LIST,BULAN_FULL,JENJANG_LIST,JALUR_LIST,$,$$,isAdmin,inTA,taYears,attachRupiahMask,bindAllRupiah,rupiahVal,fmtThousand,onlyDigits,bulanGratisFor,bulanTerbayarRp,statusBulan,jalurOptions,findSiswaById,normalizeAllSiswa,normalizeSiswaRecord,normalizeTransaksiRecord,normalizeKasKhususRecord}=K;
+const {state,registerPage,navigate,toast,uid,esc,fmtIDR,fmtDate,fmtDateTime,modalBox,openModal,closeModal,saveState,saveQueue,enqueue,hitungTunggakan,getSppTarif,tarifJenjang,bulanTerbayar,sppTrxBySiswa,tunggakanLaluSiswa,tunggakanLaluTotal,normalizeWA,bulanWajibInTA,bulanWajibSampai,saldoBendaharaCash,saldoBendaharaTransfer,saldoUserDiTangan,totalSekolah,adminUser,rekapHutang,taLabel,pullSpreadsheet,pushSnapshot,flushQueue,gasJsonp,saldoSampai,akhirBulanSebelum,BULAN_LIST,BULAN_FULL,JENJANG_LIST,JALUR_LIST,$,$$,isAdmin,inTA,taYears,attachRupiahMask,bindAllRupiah,rupiahVal,fmtThousand,onlyDigits,bulanGratisFor,bulanTerbayarRp,statusBulan,jalurOptions,findSiswaById,normalizeAllSiswa,normalizeSiswaRecord,normalizeTransaksiRecord,normalizeKasKhususRecord,isCatatanSetoranGuru}=K;
 const sess=()=>JSON.parse(localStorage.getItem('isa_session_v2')||'null');
 const sek=()=>state.settings.namaSekolah||"";
 const alm=()=>state.settings.alamatSekolah||"";
@@ -1685,6 +1700,7 @@ registerPage('rekap',{title:'Rekap Kas',bgClass:'bg-white',
       return state.transaksi.filter(tr=>{ const d=new Date(tr.tanggal); if(y&&d.getFullYear()!==+y) return false; if(m!==''&&d.getMonth()!==+m) return false;
         if(t && (tr.tahun_ajaran||taLabel())!==t) return false;
         if(window.__rMetodeFilter && (tr.metode||'cash')!==window.__rMetodeFilter) return false;
+        if(tr.tipe==='setor' || isCatatanSetoranGuru(tr)) return false;
         if(sess().role!=='admin') return tr.input_user_id===sess().id; return true;
       });
     };
@@ -1723,7 +1739,7 @@ function buildRekapitulasi(list, ta){
     if(sppByJen[j]!==undefined) sppByJen[j]+=Number(t.nominal||0);
     else sppLain+=Number(t.nominal||0);
   });
-  list.filter(t=>t.tipe==='kas_in').forEach(t=>{
+  list.filter(t=>t.tipe==='kas_in' && !isCatatanSetoranGuru(t)).forEach(t=>{
     const k=String(t.kategori||'').toLowerCase();
     if(k==='bayar hutang') bayarHutang+=Number(t.nominal||0);
     else if(k.includes('infaq')||k.includes('infak')) infaq+=Number(t.nominal||0);
@@ -2130,13 +2146,11 @@ registerPage('setor',{title:'Setor ke Bendahara',bgClass:'bg-white',
       const n=rupiahVal($('#seN')), met=$('#seM').value, sal=saldoUserDiTangan(u.id);
       if(n<=0){ toast('Nominal tidak valid.','warn'); return; }
       if(n>sal){ toast('Nominal melebihi saldo Anda.','warn'); return; }
-      const adm=adminUser();
-      // FIX v13 (no.3): t1.sumber='tangan' supaya setor MENGURANGI saldo guru "di tangan".
-      // t2 (kas_in pada sumber 'bendahara') MENAMBAH saldo bendahara pada metode yang sama.
+      // v25: setoran guru hanya CATATAN MUTASI, bukan kas_in/pendapatan.
+      // Satu record `setor` mengurangi saldo guru dan menambah saldo bendahara tanpa masuk BKU/Rekap/Pendapatan.
       const t1={ id:uid(), tipe:'setor', tanggal:new Date().toISOString(), tahun_ajaran:taLabel(), metode:met, nominal:n, kategori:'Setor', keterangan:$('#seK').value.trim()||'Setor ke Bendahara', input_user_id:u.id, input_user_nama:u.nama, input_user_role:'guru', sumber:'tangan', created_at:new Date().toISOString() };
-      const t2={ ...t1, id:uid(), tipe:'kas_in', kategori:'Setoran Guru', keterangan:'Terima setoran dari '+u.nama, input_user_id:adm.id, input_user_nama:adm.nama, input_user_role:'admin', sumber:'bendahara', ref_setor_id:t1.id };
       if(!confirm('Konfirmasi setor '+fmtIDR(n)+' ('+(met==='cash'?'CASH':'TRANSFER')+') ke Bendahara?')) return;
-      state.transaksi.unshift(t1,t2); saveState(); enqueue('transaksi','upsert',t1); enqueue('transaksi','upsert',t2);
+      state.transaksi.unshift(t1); saveState(); enqueue('transaksi','upsert',t1);
       toast('✅ Setoran tercatat.','success'); $('#seN').value=''; $('#seK').value='';
       $('[data-testid="setor-saldo"]').textContent=fmtIDR(saldoUserDiTangan(u.id)); window.__seR();
     };
@@ -2564,17 +2578,25 @@ registerPage('admin-buku-hutang',{title:'Buku Hutang',bgClass:'bg-white',adminOn
 
 /* ====== ADMIN: REKAP KAS GURU ====== */
 registerPage('admin-rekap-guru',{title:'Saldo Per Guru',bgClass:'bg-white',adminOnly:true,
-  render(){ const gs=state.users.filter(u=>u.role==='guru'); const data=gs.map(g=>{
-      const masuk=state.transaksi.filter(t=>t.input_user_id===g.id && (t.tipe==='kas_in'||t.tipe==='spp_in')).reduce((s,t)=>s+(+t.nominal||0),0);
-      const keluar=state.transaksi.filter(t=>t.input_user_id===g.id && t.tipe==='kas_out').reduce((s,t)=>s+(+t.nominal||0),0);
-      const setor=state.transaksi.filter(t=>t.input_user_id===g.id && t.tipe==='setor').reduce((s,t)=>s+(+t.nominal||0),0);
-      return { g, masuk, keluar, setor, saldo: masuk-keluar-setor };
+  render(){ const gs=state.users.filter(u=>u.role==='guru');
+    const guruRowsLocal=(g)=>(state.transaksi||[]).filter(t=>{
+      const byId=String(t.input_user_id||'')===String(g.id||'');
+      const byName=String(t.input_user_nama||'').trim()===String(g.nama||'').trim();
+      const byPJ=String(t.guru_pj||'').trim()===String(g.nama||'').trim();
+      return (byId||byName||byPJ) && !(t.ref_setor_id && !byId);
+    });
+    const data=gs.map(g=>{
+      const rows=guruRowsLocal(g);
+      const masuk=rows.filter(t=>['kas_in','spp_in'].includes(t.tipe) && !isCatatanSetoranGuru(t)).reduce((s,t)=>s+(+t.nominal||0),0);
+      const keluar=rows.filter(t=>t.tipe==='kas_out').reduce((s,t)=>s+(+t.nominal||0),0);
+      const setor=rows.filter(t=>t.tipe==='setor' || isCatatanSetoranGuru(t)).reduce((s,t)=>s+(+t.nominal||0),0);
+      return { g, masuk, keluar, setor, saldo: masuk-keluar-setor, count: rows.length };
     });
     // v18 (item 13): guru dengan saldo>0 dianggap "menunggu setor" → tampilkan badge notifikasi
     const notifCnt=data.filter(r=>r.saldo>0).length;
     return `<div class="max-w-3xl mx-auto">
       ${notifCnt?`<div class="bg-amber-50 border border-amber-300 rounded-xl p-3 mb-3 flex items-center gap-2"><i class="fas fa-bell text-amber-600 text-lg animate-pulse"></i><div class="flex-1 text-sm text-amber-800"><b>${notifCnt} guru</b> memiliki saldo di tangan menunggu setor ke Bendahara Pusat.</div></div>`:''}
-      <div class="divide-y border rounded-xl bg-white">${data.length?data.map(r=>`<div class="p-4" data-testid="rekap-guru-row-${r.g.id}"><div class="flex items-center justify-between"><p class="font-semibold">${esc(r.g.nama)} <span class="text-[10px] text-gray-500">@${esc(r.g.username)}</span>${r.saldo>0?' <span class="ml-1 text-[10px] bg-rose-600 text-white px-1.5 py-0.5 rounded-full font-bold">MENUNGGU SETOR</span>':''}</p><div class="flex gap-1"><button onclick="window.__guruDetail('${r.g.id}')" class="text-xs bg-sky-600 text-white font-bold px-3 py-1.5 rounded-lg"><i class="fas fa-eye mr-1"></i>Detail</button>${r.saldo>0?`<button onclick="window.__guruAckSetor('${r.g.id}')" class="text-xs bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-lg"><i class="fas fa-check mr-1"></i>Terima Setoran</button>`:''}</div></div><div class="grid grid-cols-4 gap-2 mt-2 text-xs">
+      <div class="divide-y border rounded-xl bg-white">${data.length?data.map(r=>`<div role="button" tabindex="0" class="p-4 cursor-pointer hover:bg-sky-50/50 focus:outline-none focus:ring-2 focus:ring-sky-500" onclick="window.__guruDetail('${r.g.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.__guruDetail('${r.g.id}')}" data-testid="rekap-guru-row-${r.g.id}"><div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"><p class="font-semibold min-w-0">${esc(r.g.nama)} <span class="text-[10px] text-gray-500">@${esc(r.g.username)}</span> <span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full">${r.count} trx</span>${r.saldo>0?' <span class="ml-1 text-[10px] bg-rose-600 text-white px-1.5 py-0.5 rounded-full font-bold">MENUNGGU SETOR</span>':''}</p><div class="flex flex-wrap gap-1"><button type="button" onclick="event.stopPropagation(); window.__guruDetail('${r.g.id}')" class="text-xs bg-sky-600 text-white font-bold px-3 py-1.5 rounded-lg"><i class="fas fa-eye mr-1"></i>Detail</button><button type="button" onclick="event.stopPropagation(); window.__guruPdf('${r.g.id}')" class="text-xs bg-slate-700 text-white font-bold px-3 py-1.5 rounded-lg"><i class="fas fa-file-pdf mr-1"></i>PDF</button>${r.saldo>0?`<button type="button" onclick="event.stopPropagation(); window.__guruAckSetor('${r.g.id}')" class="text-xs bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-lg"><i class="fas fa-check mr-1"></i>Terima Setoran</button>`:''}</div></div><div class="grid grid-cols-4 gap-2 mt-2 text-xs">
       <div class="bg-emerald-50 p-2 rounded text-center"><p class="text-emerald-700 font-bold uppercase text-[10px]">Masuk</p><p class="text-emerald-700 font-bold">${fmtIDR(r.masuk)}</p></div>
       <div class="bg-rose-50 p-2 rounded text-center"><p class="text-rose-700 font-bold uppercase text-[10px]">Keluar</p><p class="text-rose-700 font-bold">${fmtIDR(r.keluar)}</p></div>
       <div class="bg-sky-50 p-2 rounded text-center"><p class="text-sky-700 font-bold uppercase text-[10px]">Disetor</p><p class="text-sky-700 font-bold">${fmtIDR(r.setor)}</p></div>
@@ -2582,12 +2604,40 @@ registerPage('admin-rekap-guru',{title:'Saldo Per Guru',bgClass:'bg-white',admin
     </div></div>`).join(''):'<p class="p-3 text-sm text-gray-400 text-center">Belum ada guru.</p>'}</div></div>`;
   },
   mounted(){
-    // v18 (item 11): tampilkan rincian pemasukan per guru
+    // v25: detail guru berisi penerimaan SPP/Kas, pengeluaran, dan catatan setoran (bukan pendapatan).
+    window.__guruRows=(gid)=>{
+      const g=state.users.find(u=>String(u.id)===String(gid)); if(!g) return [];
+      return (state.transaksi||[]).filter(t=>{
+        const byId=String(t.input_user_id||'')===String(g.id||'');
+        const byName=String(t.input_user_nama||'').trim()===String(g.nama||'').trim();
+        const byPJ=String(t.guru_pj||'').trim()===String(g.nama||'').trim();
+        return (byId||byName||byPJ) && !(t.ref_setor_id && !byId);
+      }).sort((a,b)=> new Date(a.tanggal||a.created_at||0)-new Date(b.tanggal||b.created_at||0));
+    };
     window.__guruDetail=(gid)=>{
-      const g=state.users.find(u=>u.id===gid); if(!g) return;
-      const trs=state.transaksi.filter(t=>t.input_user_id===gid || t.guru_pj===g.nama).sort((a,b)=> new Date(b.tanggal)-new Date(a.tanggal));
-      const rows=trs.length? trs.map(t=>{ const lbl = t.tipe==='spp_in'?('SPP '+(t.nama_siswa||'-')) : t.tipe==='kas_in'?('Kas Masuk · '+(t.kategori||'')) : t.tipe==='kas_out'?('Kas Keluar · '+(t.kategori||'')) : t.tipe==='setor'?'Setor ke Bendahara' : t.tipe; const cls = ['spp_in','kas_in'].includes(t.tipe)?'text-emerald-700':(t.tipe==='setor'?'text-sky-700':'text-rose-700'); const sign=['spp_in','kas_in'].includes(t.tipe)?'+':'-'; return `<div class="p-2 border-t text-xs flex justify-between"><div><b>${esc(lbl)}</b><br><span class="text-gray-500">${fmtDate(t.tanggal)} · ${(t.metode||'cash').toUpperCase()}${t.guru_pj?` · PJ: ${esc(t.guru_pj)}`:''}</span></div><span class="${cls} font-bold">${sign}${fmtIDR(t.nominal)}</span></div>`; }).join('') : '<p class="p-3 text-xs text-gray-400 text-center">Belum ada transaksi.</p>';
-      openModal(modalBox('Rincian Saldo — '+g.nama, `<div class="max-h-[60vh] overflow-y-auto border rounded-lg">${rows}</div>`));
+      const g=state.users.find(u=>String(u.id)===String(gid)); if(!g) return;
+      const trs=window.__guruRows(gid).slice().reverse();
+      const rows=trs.length? trs.map(t=>{ const setor=t.tipe==='setor' || isCatatanSetoranGuru(t); const masuk=['spp_in','kas_in'].includes(t.tipe)&&!setor; const lbl = t.tipe==='spp_in'?('SPP '+(t.nama_siswa||'-')) : t.tipe==='kas_in'?('Kas Masuk · '+(t.kategori||'')) : t.tipe==='kas_out'?('Kas Keluar · '+(t.kategori||'')) : setor?'Setor ke Bendahara' : t.tipe; const cls = masuk?'text-emerald-700':(setor?'text-sky-700':'text-rose-700'); const sign=masuk?'+':'-'; return `<div class="p-2 border-t text-xs flex justify-between gap-3"><div class="min-w-0"><b>${esc(lbl)}</b><br><span class="text-gray-500">${fmtDate(t.tanggal)} · ${(t.metode||'cash').toUpperCase()}${t.guru_pj?` · PJ: ${esc(t.guru_pj)}`:''}${setor?' · CATATAN SETORAN':''}</span><br><span class="text-gray-500 break-words">${esc(t.keterangan||'-')}</span></div><span class="${cls} font-bold whitespace-nowrap">${sign}${fmtIDR(t.nominal)}</span></div>`; }).join('') : '<p class="p-3 text-xs text-gray-400 text-center">Belum ada transaksi.</p>';
+      const masuk=window.__guruRows(gid).filter(t=>['spp_in','kas_in'].includes(t.tipe) && !isCatatanSetoranGuru(t)).reduce((s,t)=>s+Number(t.nominal||0),0);
+      const keluar=window.__guruRows(gid).filter(t=>t.tipe==='kas_out').reduce((s,t)=>s+Number(t.nominal||0),0);
+      const setor=window.__guruRows(gid).filter(t=>t.tipe==='setor').reduce((s,t)=>s+Number(t.nominal||0),0);
+      openModal(modalBox('Laporan Guru — '+esc(g.nama), `<div class="grid grid-cols-3 gap-2 text-xs mb-2"><div class="bg-emerald-50 p-2 rounded text-center"><b class="text-emerald-700">${fmtIDR(masuk)}</b><br>Terima</div><div class="bg-sky-50 p-2 rounded text-center"><b class="text-sky-700">${fmtIDR(setor)}</b><br>Setor</div><div class="bg-amber-50 p-2 rounded text-center"><b class="text-amber-700">${fmtIDR(masuk-keluar-setor)}</b><br>Sisa</div></div><button type="button" onclick="window.__guruPdf('${gid}')" class="mb-2 w-full bg-slate-700 text-white text-xs font-bold py-2 rounded"><i class="fas fa-file-pdf mr-1"></i>Unduh PDF Laporan Guru</button><div class="max-h-[60vh] overflow-y-auto border rounded-lg">${rows}</div>`));
+    };
+    window.__guruPdf=(gid)=>{
+      try{
+        const g=state.users.find(u=>String(u.id)===String(gid)); if(!g){ toast('Guru tidak ditemukan.','warn'); return; }
+        const { jsPDF } = window.jspdf||{}; if(!jsPDF){ toast('Library PDF belum siap. Tunggu sebentar lalu coba lagi.','warn'); return; }
+        const doc=new jsPDF({unit:'pt',format:'a4'}); const PW=doc.internal.pageSize.getWidth(); let y=40;
+        if(state.settings.logoDataURL){ try{ doc.addImage(state.settings.logoDataURL,'PNG',45,y,50,50,undefined,'FAST'); }catch(e){} }
+        doc.setFont('helvetica','bold').setFontSize(14).text(String(sek()||'').toUpperCase(),PW/2,y+12,{align:'center'});
+        doc.setFont('helvetica','normal').setFontSize(9).text(alm()||'',PW/2,y+28,{align:'center'}); doc.setLineWidth(1).line(40,y+52,PW-40,y+52); y+=72;
+        doc.setFont('helvetica','bold').setFontSize(12).text('LAPORAN SALDO & SETORAN GURU',PW/2,y,{align:'center'}); y+=16;
+        doc.setFont('helvetica','normal').setFontSize(9).text('Guru: '+g.nama+' (@'+(g.username||'-')+') · Dicetak: '+fmtDate(new Date().toISOString()),40,y); y+=14;
+        let run=0; const trs=window.__guruRows(gid);
+        const body=trs.map((t,i)=>{ const setor=t.tipe==='setor'||isCatatanSetoranGuru(t), masuk=['spp_in','kas_in'].includes(t.tipe)&&!setor, keluar=t.tipe==='kas_out'; const n=Number(t.nominal||0); if(masuk) run+=n; else if(keluar||setor) run-=n; const jenis=t.tipe==='spp_in'?'SPP':t.tipe==='kas_in'?'Kas Masuk':keluar?'Kas Keluar':setor?'Setoran':'Catatan'; return [i+1,fmtDate(t.tanggal),jenis,t.nama_siswa||t.kategori||'-',t.keterangan||'-',masuk?__pdfIDR(n):'-',keluar?__pdfIDR(n):'-',setor?__pdfIDR(n):'-',__pdfIDR(run)]; });
+        __drawSimpleTable(doc,{startY:y, head:['#','Tanggal','Jenis','Nama/Kategori','Keterangan','Terima','Keluar','Setor','Sisa'], body:body.length?body:[['-','-','-','Belum ada transaksi','-','-','-','-','-']], widths:[22,52,58,82,108,58,55,55,62], aligns:{0:'center',5:'right',6:'right',7:'right',8:'right'}, headColor:[2,132,199]});
+        doc.save('Laporan_Guru_'+String(g.nama||'guru').replace(/[^A-Za-z0-9_-]+/g,'_')+'.pdf'); toast('✅ PDF laporan guru diunduh.','success');
+      }catch(err){ console.error(err); toast('PDF laporan guru gagal dibuat: '+(err&&err.message?err.message:err),'error'); }
     };
     // v18 (item 13): terima setoran → saldo guru direset ke 0 via transaksi setor otomatis
     window.__guruAckSetor=(gid)=>{
@@ -2597,10 +2647,8 @@ registerPage('admin-rekap-guru',{title:'Saldo Per Guru',bgClass:'bg-white',admin
       if(met!=='1' && met!=='2') return;
       const metode = met==='1'?'cash':'transfer';
       if(!confirm('Konfirmasi: TERIMA SETORAN '+fmtIDR(sal)+' dari '+g.nama+' via '+metode.toUpperCase()+'?\n\nSaldo guru akan direset ke 0.')) return;
-      const adm=adminUser();
       const t1={ id:uid(), tipe:'setor', tanggal:new Date().toISOString(), tahun_ajaran:taLabel(), metode, nominal:sal, kategori:'Setor', keterangan:'Setor diterima Bendahara Pusat', input_user_id:gid, input_user_nama:g.nama, input_user_role:'guru', sumber:'tangan', created_at:new Date().toISOString() };
-      const t2={ ...t1, id:uid(), tipe:'kas_in', kategori:'Setoran Guru', keterangan:'Terima setoran dari '+g.nama, input_user_id:adm.id, input_user_nama:adm.nama, input_user_role:'admin', sumber:'bendahara', ref_setor_id:t1.id };
-      state.transaksi.unshift(t1,t2); saveState(); try{ enqueue('transaksi','upsert',t1); enqueue('transaksi','upsert',t2); }catch(_){}
+      state.transaksi.unshift(t1); saveState(); try{ enqueue('transaksi','upsert',t1); }catch(_){}
       toast('✅ Setoran '+g.nama+' diterima. Saldo guru → 0.','success');
       navigate('admin-rekap-guru');
     };
@@ -2977,11 +3025,11 @@ registerPage('admin-jurnal-kas',{title:'Buku Kas Umum (Masuk/Keluar - Bendahara 
       $('#jkCards').innerHTML=`
         <div class="md:col-span-2 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl p-4 text-white shadow-lg">
           <p class="text-[11px] uppercase text-purple-100">Ringkasan Buku Kas Umum · <b>${periodLabel}</b> <span class="opacity-80">(SPP + Kas Umum · saldo = Bendahara + Tangan Guru)</span></p>
-          <div class="grid grid-cols-4 gap-2 mt-2 text-xs">
-            <div class="bg-white/15 rounded p-2"><p class="text-purple-100">Saldo Awal</p><p class="font-extrabold text-base" data-testid="jk-saldo-awal">${fmtIDR(saldoAwal)}</p></div>
-            <div class="bg-white/15 rounded p-2"><p class="text-emerald-100">Masuk</p><p class="font-extrabold text-base" data-testid="jk-in-per">${fmtIDR(inPer)}</p></div>
-            <div class="bg-white/15 rounded p-2"><p class="text-rose-100">Keluar</p><p class="font-extrabold text-base" data-testid="jk-out-per">${fmtIDR(outPer)}</p></div>
-            <div class="bg-white/25 rounded p-2"><p class="text-purple-50">Saldo Akhir</p><p class="font-extrabold text-base" data-testid="jk-saldo-akhir">${fmtIDR(saldoAkhir)}</p></div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-xs">
+            <div class="bg-white/15 rounded-lg p-2 min-w-0"><p class="text-purple-100">Saldo Awal</p><p class="font-extrabold text-[13px] md:text-sm leading-tight break-words tabular-nums" data-testid="jk-saldo-awal">${fmtIDR(saldoAwal)}</p></div>
+            <div class="bg-white/15 rounded-lg p-2 min-w-0"><p class="text-emerald-100">Masuk</p><p class="font-extrabold text-[13px] md:text-sm leading-tight break-words tabular-nums" data-testid="jk-in-per">${fmtIDR(inPer)}</p></div>
+            <div class="bg-white/15 rounded-lg p-2 min-w-0"><p class="text-rose-100">Keluar</p><p class="font-extrabold text-[13px] md:text-sm leading-tight break-words tabular-nums" data-testid="jk-out-per">${fmtIDR(outPer)}</p></div>
+            <div class="bg-white/25 rounded-lg p-2 min-w-0"><p class="text-purple-50">Saldo Akhir</p><p class="font-extrabold text-[13px] md:text-sm leading-tight break-words tabular-nums" data-testid="jk-saldo-akhir">${fmtIDR(saldoAkhir)}</p></div>
           </div>
           <div class="mt-2 grid grid-cols-2 gap-2 text-[11px]">
             <div class="bg-white/10 rounded p-1.5"><span class="opacity-80">INFO Kas Seragam+Sosial (Masuk)</span> <b>${fmtIDR(infoIn)}</b></div>
@@ -3250,24 +3298,25 @@ registerPage('receipt',{title:'Bukti Pembayaran Infaq Syahriyah',bgClass:'bg-gra
       }));
     }
     window.__rDl=async ()=>{
-      if(!window.html2canvas){ toast('Library belum siap.','warn'); return; }
-      await __waitLogo();
-      const el=$('#receiptCanvas');
-      const clone=el.cloneNode(true);
-      clone.id='receiptCanvasDownload';
-      clone.style.position='fixed'; clone.style.left='0'; clone.style.top='0'; clone.style.zIndex='-1';
-      clone.style.width='430px'; clone.style.maxWidth='430px'; clone.style.height='auto'; clone.style.overflow='visible';
-      clone.querySelectorAll('.cell,.cell span,.row span').forEach(x=>{ x.style.overflow='visible'; x.style.textOverflow='clip'; x.style.whiteSpace='normal'; });
-      document.body.appendChild(clone);
-      await new Promise(r=>setTimeout(r,80));
-      const w=Math.ceil(clone.scrollWidth||clone.offsetWidth||430);
-      const h=Math.ceil(clone.scrollHeight||clone.offsetHeight||720);
-      const c=await window.html2canvas(clone,{backgroundColor:'#fff',scale:3,useCORS:true,allowTaint:true,
-        width:w,height:h,windowWidth:w,windowHeight:h,scrollX:0,scrollY:0});
-      clone.remove();
-      const a=document.createElement('a'); a.href=c.toDataURL('image/png');
-      a.download='Resi_'+((t.nama_siswa||s.nama||'siswa').replace(/[^A-Za-z0-9_-]+/g,'_'))+'_'+new Date(t.tanggal).toISOString().slice(0,10)+'.png';
-      a.click(); toast('✅ Resi lengkap tersimpan (PNG).');
+      if(!window.html2canvas){ toast('Library belum siap. Tunggu sebentar lalu coba lagi.','warn'); return; }
+      try{
+        await __waitLogo();
+        const el=$('#receiptCanvas'); if(!el){ toast('Resi tidak ditemukan.','warn'); return; }
+        const stage=document.createElement('div'); stage.id='receiptExportStage';
+        const clone=el.cloneNode(true); clone.id='receiptCanvas';
+        stage.appendChild(clone); document.body.appendChild(stage);
+        stage.querySelectorAll('img').forEach(img=>{ try{ img.crossOrigin='anonymous'; }catch(_){} });
+        await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+        const rect=clone.getBoundingClientRect();
+        const w=Math.ceil(Math.max(rect.width, clone.scrollWidth, clone.offsetWidth));
+        const h=Math.ceil(Math.max(rect.height, clone.scrollHeight, clone.offsetHeight));
+        const c=await window.html2canvas(clone,{backgroundColor:'#fff',scale:3,useCORS:true,allowTaint:true,
+          width:w,height:h,windowWidth:w,windowHeight:h,x:0,y:0,scrollX:0,scrollY:0,removeContainer:true});
+        stage.remove();
+        const a=document.createElement('a'); a.href=c.toDataURL('image/png');
+        a.download='Resi_'+((t.nama_siswa||s.nama||'siswa').replace(/[^A-Za-z0-9_-]+/g,'_'))+'_'+new Date(t.tanggal).toISOString().slice(0,10)+'.png';
+        a.click(); toast('✅ Resi tersimpan sama seperti preview/cetak.','success');
+      }catch(err){ try{ const st=document.getElementById('receiptExportStage'); if(st) st.remove(); }catch(_){} console.error(err); toast('Download resi gagal: '+(err&&err.message?err.message:err),'error'); }
     };
     window.__rWA=async ()=>{
       const wa=normalizeWA(s.no_wa||'');
@@ -3315,7 +3364,7 @@ registerPage('receipt',{title:'Bukti Pembayaran Infaq Syahriyah',bgClass:'bg-gra
 registerPage('pendapatan-hari-ini',{title:'Pendapatan Hari Ini',bgClass:'bg-white',
   render(){
     const _today=new Date().toISOString().slice(0,10);
-    const all=(state.transaksi||[]).filter(t=>['spp_in','kas_in'].includes(t.tipe) && (t.tanggal||'').slice(0,10)===_today);
+    const all=(state.transaksi||[]).filter(t=>['spp_in','kas_in'].includes(t.tipe) && !isCatatanSetoranGuru(t) && (t.tanggal||'').slice(0,10)===_today);
     if(!all.length) return '<div class="p-6 text-center text-gray-400 text-sm"><i class="fas fa-inbox text-3xl mb-2 block"></i>Belum ada pemasukan hari ini.</div>';
     const filter=(window.__phiFil||'all');
     const rows=all.filter(t=>{
